@@ -89,11 +89,13 @@ export function registerComplianceRoutes(app: Express) {
     const documentType = (req.query.documentType as DocumentType) ?? 'CPF';
     try {
       const document = validateDocument(req.params.document, documentType);
+      const maxTier = req.query.maxTier ? Number(req.query.maxTier) : undefined;
       const { dossier } = await buildDossier({
         document,
         documentType,
         providerSlug: req.query.providerSlug as string | undefined,
         requestedBy: (req as AuthedRequest).auth?.sub,
+        maxTier,
       });
       res.json(dossier);
     } catch (e) {
@@ -105,11 +107,13 @@ export function registerComplianceRoutes(app: Express) {
     const documentType = (req.query.documentType as DocumentType) ?? 'CPF';
     try {
       const document = validateDocument(req.params.document, documentType);
+      const maxTier = req.query.maxTier ? Number(req.query.maxTier) : undefined;
       const { assessment } = await buildDossier({
         document,
         documentType,
         providerSlug: req.query.providerSlug as string | undefined,
         requestedBy: (req as AuthedRequest).auth?.sub,
+        maxTier,
       });
       res.json(assessment);
     } catch (e) {

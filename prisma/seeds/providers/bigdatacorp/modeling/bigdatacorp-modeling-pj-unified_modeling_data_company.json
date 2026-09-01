@@ -1,0 +1,30 @@
+{
+  "slug": "bigdatacorp-modeling-pj-unified_modeling_data_company",
+  "name": "BigDataCorp — Dados Unificados para Modelagem",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/modelagem",
+    "_bdcMeta": {
+      "category": "modeling",
+      "activationTier": 3,
+      "dataset": "unified_modeling_data_company",
+      "schemaBlocks": []
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "unified_modeling_data_company",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [],
+  "supportedTypes": ["CNPJ"],
+  "isActive": false,
+  "priority": 80
+}

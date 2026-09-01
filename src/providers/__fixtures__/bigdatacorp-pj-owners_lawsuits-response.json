@@ -1,0 +1,14 @@
+{
+  "Result": [
+    {
+      "OwnersLawsuits": [
+        {
+          "court": "TJSP",
+          "type": "CIVEL",
+          "status": "ATIVO",
+          "amount": 10000
+        }
+      ]
+    }
+  ]
+}

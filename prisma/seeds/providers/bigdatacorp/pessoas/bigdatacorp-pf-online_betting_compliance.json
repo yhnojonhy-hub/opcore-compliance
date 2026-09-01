@@ -1,0 +1,30 @@
+{
+  "slug": "bigdatacorp-pf-online_betting_compliance",
+  "name": "BigDataCorp — Compliance de Casas de Aposta",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/pessoas",
+    "_bdcMeta": {
+      "category": "pessoas",
+      "activationTier": 2,
+      "dataset": "online_betting_compliance",
+      "schemaBlocks": []
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "online_betting_compliance",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [],
+  "supportedTypes": ["CPF"],
+  "isActive": false,
+  "priority": 50
+}

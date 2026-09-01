@@ -1,0 +1,35 @@
+{
+  "slug": "bigdatacorp-pf-collections",
+  "name": "BigDataCorp — Presença em Cobrança",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/pessoas",
+    "_bdcMeta": {
+      "category": "pessoas",
+      "activationTier": 1,
+      "dataset": "collections",
+      "schemaBlocks": ["credit", "fiscalHealth"]
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "collections",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [
+    {
+      "source": "$.Result[0].Collections",
+      "target": "sections.credit.collectionsPresence"
+    }
+  ],
+  "supportedTypes": ["CPF"],
+  "isActive": false,
+  "priority": 20
+}

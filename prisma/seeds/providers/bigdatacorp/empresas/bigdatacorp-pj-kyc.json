@@ -1,0 +1,47 @@
+{
+  "slug": "bigdatacorp-pj-kyc",
+  "name": "BigDataCorp — KYC e Compliance",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/empresas",
+    "_bdcMeta": {
+      "category": "empresas",
+      "activationTier": 1,
+      "dataset": "kyc",
+      "schemaBlocks": ["pldft", "sanctions"]
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "kyc",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [
+    {
+      "source": "$.Result[0].KycData.IsCurrentlyPEP",
+      "target": "sections.sanctions.isCurrentlyPep"
+    },
+    {
+      "source": "$.Result[0].KycData.IsCurrentlySanctioned",
+      "target": "sections.sanctions.isCurrentlySanctioned"
+    },
+    {
+      "source": "$.Result[0].KycData.WasPreviouslySanctioned",
+      "target": "sections.sanctions.wasPreviouslySanctioned"
+    },
+    {
+      "source": "$.Result[0].KycData.SanctionsHistory",
+      "target": "sections.sanctions.internationalHits"
+    }
+  ],
+  "supportedTypes": ["CNPJ"],
+  "isActive": true,
+  "priority": 20
+}

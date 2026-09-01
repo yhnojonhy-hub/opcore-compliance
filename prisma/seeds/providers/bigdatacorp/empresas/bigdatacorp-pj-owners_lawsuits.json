@@ -1,0 +1,35 @@
+{
+  "slug": "bigdatacorp-pj-owners_lawsuits",
+  "name": "BigDataCorp — Processos Judiciais dos Sócios",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/empresas",
+    "_bdcMeta": {
+      "category": "empresas",
+      "activationTier": 1,
+      "dataset": "owners_lawsuits",
+      "schemaBlocks": ["litigationEsg"]
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "owners_lawsuits",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [
+    {
+      "source": "$.Result[0].OwnersLawsuits",
+      "target": "sections.litigationEsg.lawsuits"
+    }
+  ],
+  "supportedTypes": ["CNPJ"],
+  "isActive": true,
+  "priority": 20
+}

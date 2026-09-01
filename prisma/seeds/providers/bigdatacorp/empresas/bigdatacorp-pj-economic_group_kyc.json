@@ -1,0 +1,35 @@
+{
+  "slug": "bigdatacorp-pj-economic_group_kyc",
+  "name": "BigDataCorp — KYC e Compliance do Grupo Econômico",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/empresas",
+    "_bdcMeta": {
+      "category": "empresas",
+      "activationTier": 2,
+      "dataset": "economic_group_kyc",
+      "schemaBlocks": ["sanctions"]
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "economic_group_kyc",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [
+    {
+      "source": "$.Result[0].EconomicGroupKycData",
+      "target": "sections.sanctions.internationalHits"
+    }
+  ],
+  "supportedTypes": ["CNPJ"],
+  "isActive": false,
+  "priority": 50
+}

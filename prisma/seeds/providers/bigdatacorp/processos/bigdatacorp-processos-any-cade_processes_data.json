@@ -1,0 +1,35 @@
+{
+  "slug": "bigdatacorp-processos-any-cade_processes_data",
+  "name": "BigDataCorp — Processos do CADE",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/processos",
+    "_bdcMeta": {
+      "category": "processos",
+      "activationTier": 2,
+      "dataset": "cade_processes_data",
+      "schemaBlocks": ["litigationEsg"]
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "cade_processes_data",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [
+    {
+      "source": "$.Result[0].Processes",
+      "target": "sections.litigationEsg.lawsuits"
+    }
+  ],
+  "supportedTypes": ["CPF", "CNPJ"],
+  "isActive": false,
+  "priority": 50
+}

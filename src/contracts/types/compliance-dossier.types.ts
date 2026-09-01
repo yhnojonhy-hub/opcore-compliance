@@ -65,6 +65,9 @@ export interface PjSections {
   sanctions: Record<string, unknown>;
   fiscalHealth: Record<string, unknown>;
   litigationEsg: Record<string, unknown>;
+  certificates: Record<string, unknown>;
+  credit: Record<string, unknown>;
+  extensions: Record<string, unknown>;
 }
 
 export interface ComplianceDossier {
@@ -95,5 +98,8 @@ export function emptyPjSections(): PjSections {
     sanctions: {},
     fiscalHealth: {},
     litigationEsg: {},
+    certificates: {},
+    credit: {},
+    extensions: {},
   };
 }

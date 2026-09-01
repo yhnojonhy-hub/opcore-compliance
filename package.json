@@ -19,6 +19,7 @@
     "db:migrate": "NODE_ENV=development prisma migrate dev",
     "db:push": "NODE_ENV=development prisma db push",
     "db:seed": "NODE_ENV=development tsx prisma/seed.ts",
+    "generate:bdc-catalog": "tsx scripts/generate-bdc-catalog.ts",
     "db:studio": "NODE_ENV=development prisma studio",
     "postinstall": "prisma generate"
   },

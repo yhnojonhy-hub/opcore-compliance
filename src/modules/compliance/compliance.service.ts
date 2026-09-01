@@ -1,6 +1,6 @@
 import type { DocumentType, Prisma, Provider } from '@prisma/client';
 import { prisma } from '../../db/prisma.js';
-import { applyFieldMappings } from '../../providers/provider.mapper.js';
+import { applyFieldMappings, resolveMappedPayload } from '../../providers/provider.mapper.js';
 import { cacheExpiresAt, executeProvider } from '../../providers/provider.executor.js';
 import { resolveProvider } from '../../providers/provider.registry.js';
 import type { FieldMapping } from '../../providers/provider.interface.js';
@@ -57,6 +57,27 @@ export async function consultDocument(params: {
   });
 
   if (existing && isCacheValid(existing.expiresAt)) {
+    const fieldMappings = provider.fieldMappings as unknown as FieldMapping[];
+    const payload = resolveMappedPayload(
+      existing.rawPayload,
+      fieldMappings,
+      existing.payload as Record<string, unknown>,
+    );
+
+    const storedPayload = existing.payload as Record<string, unknown>;
+    if (JSON.stringify(payload) !== JSON.stringify(storedPayload)) {
+      await prisma.complianceConsultation.update({
+        where: {
+          document_documentType_providerId: {
+            document: params.document,
+            documentType: params.documentType,
+            providerId: provider.id,
+          },
+        },
+        data: { payload: payload as Prisma.InputJsonValue },
+      });
+    }
+
     await logAudit({
       action: 'cache_hit',
       document: params.document,
@@ -68,7 +89,7 @@ export async function consultDocument(params: {
       documentType: params.documentType,
       provider: provider.slug,
       source: 'cache',
-      payload: existing.payload as Record<string, unknown>,
+      payload,
       rawPayload: existing.rawPayload,
       cachedAt: existing.updatedAt.toISOString(),
       providerId: provider.id,
@@ -145,13 +166,21 @@ export function toConsultationInput(
   row: Awaited<ReturnType<typeof getCachedConsultations>>[number],
   cacheHit: boolean,
 ) {
+  const fieldMappings = row.provider.fieldMappings as unknown as FieldMapping[];
+  const payload = resolveMappedPayload(
+    row.rawPayload,
+    fieldMappings,
+    row.payload as Record<string, unknown>,
+  );
+
   return {
     providerSlug: row.provider.slug,
     consultedAt: row.updatedAt,
     cacheHit,
-    payload: row.payload as Record<string, unknown>,
+    priority: row.provider.priority,
+    payload,
     rawPayload: row.rawPayload,
-    fieldMappings: row.provider.fieldMappings as unknown as FieldMapping[],
+    fieldMappings,
   };
 }
 

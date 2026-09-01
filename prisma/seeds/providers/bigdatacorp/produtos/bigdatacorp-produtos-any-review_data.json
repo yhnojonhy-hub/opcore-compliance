@@ -1,0 +1,30 @@
+{
+  "slug": "bigdatacorp-produtos-any-review_data",
+  "name": "BigDataCorp — Notas e avaliações",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/produtos",
+    "_bdcMeta": {
+      "category": "produtos",
+      "activationTier": 3,
+      "dataset": "review_data",
+      "schemaBlocks": []
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "review_data",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [],
+  "supportedTypes": ["CPF", "CNPJ"],
+  "isActive": false,
+  "priority": 80
+}

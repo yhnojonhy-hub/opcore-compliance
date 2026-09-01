@@ -1,0 +1,28 @@
+{
+  "Result": [
+    {
+      "MatchKeys": "doc10573521000174",
+      "BasicData": {
+        "TaxIdNumber": "10573521000174",
+        "TaxIdCountry": "BRAZIL",
+        "OfficialName": "OPEN KNOWLEDGE BRASIL",
+        "TradeName": "REDE PELO CONHECIMENTO LIVRE",
+        "FoundedDate": "2013-10-03T00:00:00Z",
+        "TaxIdStatus": "ATIVA",
+        "TaxIdStatusDate": "2025-08-18T00:00:00Z",
+        "Activities": [
+          {
+            "IsMain": true,
+            "Code": "9430800",
+            "Activity": "ATIVIDADES DE ASSOCIACOES DE DEFESA DE DIREITOS SOCIAIS"
+          }
+        ]
+      },
+      "KycData": {
+        "IsCurrentlyPEP": false,
+        "IsCurrentlySanctioned": false,
+        "SanctionsHistory": []
+      }
+    }
+  ]
+}

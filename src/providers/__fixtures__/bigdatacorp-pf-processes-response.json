@@ -1,0 +1,14 @@
+{
+  "Result": [
+    {
+      "Processes": [
+        {
+          "court": "TRF1",
+          "type": "CRIMINAL",
+          "status": "ARQUIVADO",
+          "amount": null
+        }
+      ]
+    }
+  ]
+}

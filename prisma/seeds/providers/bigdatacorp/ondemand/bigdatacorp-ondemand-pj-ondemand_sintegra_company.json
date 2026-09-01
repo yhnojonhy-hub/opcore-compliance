@@ -1,0 +1,30 @@
+{
+  "slug": "bigdatacorp-ondemand-pj-ondemand_sintegra_company",
+  "name": "BigDataCorp — SINTEGRA",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/ondemand",
+    "_bdcMeta": {
+      "category": "ondemand",
+      "activationTier": 2,
+      "dataset": "ondemand_sintegra_company",
+      "schemaBlocks": []
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "ondemand_sintegra_company",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [],
+  "supportedTypes": ["CNPJ"],
+  "isActive": false,
+  "priority": 50
+}

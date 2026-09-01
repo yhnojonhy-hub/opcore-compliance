@@ -1,0 +1,30 @@
+{
+  "slug": "bigdatacorp-pf-basic_data_with_configurable_recency",
+  "name": "BigDataCorp — Dados Básicos de Recência Configurável",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/pessoas",
+    "_bdcMeta": {
+      "category": "pessoas",
+      "activationTier": 2,
+      "dataset": "basic_data_with_configurable_recency",
+      "schemaBlocks": []
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "basic_data_with_configurable_recency",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [],
+  "supportedTypes": ["CPF"],
+  "isActive": false,
+  "priority": 50
+}

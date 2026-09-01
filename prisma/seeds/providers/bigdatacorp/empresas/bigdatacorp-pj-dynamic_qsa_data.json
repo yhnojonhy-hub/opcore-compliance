@@ -1,0 +1,43 @@
+{
+  "slug": "bigdatacorp-pj-dynamic_qsa_data",
+  "name": "BigDataCorp — QSA de Recência Configurável",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/empresas",
+    "_bdcMeta": {
+      "category": "empresas",
+      "activationTier": 1,
+      "dataset": "dynamic_qsa_data",
+      "schemaBlocks": ["corporateStructure"]
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "dynamic_qsa_data",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [
+    {
+      "source": "$.Result[0].Relationships",
+      "target": "sections.corporateStructure.qsa"
+    },
+    {
+      "source": "$.Result[0].RelationshipData",
+      "target": "sections.corporateStructure.qsa"
+    },
+    {
+      "source": "$.Result[0].QSA",
+      "target": "sections.corporateStructure.qsa"
+    }
+  ],
+  "supportedTypes": ["CNPJ"],
+  "isActive": true,
+  "priority": 20
+}

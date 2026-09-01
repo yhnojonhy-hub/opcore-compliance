@@ -1,0 +1,35 @@
+{
+  "slug": "bigdatacorp-ondemand-pj-ondemand_cnj_negative_certificate_company",
+  "name": "BigDataCorp — CNJ - Negativa",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/ondemand",
+    "_bdcMeta": {
+      "category": "ondemand",
+      "activationTier": 1,
+      "dataset": "ondemand_cnj_negative_certificate_company",
+      "schemaBlocks": ["certificates"]
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "ondemand_cnj_negative_certificate_company",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [
+    {
+      "source": "$.Result[0].OnlineCertificates",
+      "target": "sections.certificates.cnj"
+    }
+  ],
+  "supportedTypes": ["CNPJ"],
+  "isActive": false,
+  "priority": 20
+}

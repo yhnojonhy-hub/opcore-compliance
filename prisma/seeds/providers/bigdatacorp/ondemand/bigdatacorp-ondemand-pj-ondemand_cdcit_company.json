@@ -1,0 +1,30 @@
+{
+  "slug": "bigdatacorp-ondemand-pj-ondemand_cdcit_company",
+  "name": "BigDataCorp — Contratação de Pessoas com Deficiência e Beneficiários Reabilitados da Previdência Social",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/ondemand",
+    "_bdcMeta": {
+      "category": "ondemand",
+      "activationTier": 2,
+      "dataset": "ondemand_cdcit_company",
+      "schemaBlocks": []
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "ondemand_cdcit_company",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [],
+  "supportedTypes": ["CNPJ"],
+  "isActive": false,
+  "priority": 50
+}

@@ -1,12 +1,25 @@
 import { prisma } from '../src/db/prisma.js';
-import { loadProviderSeed, PROVIDER_SEED_FILES } from './provider-seeds.manifest.js';
+import { loadProviderSeed, ALL_PROVIDER_SEED_FILES } from './provider-seeds.manifest.js';
 
 const riskRules = [
   {
     code: 'RESTRICTIVE_LIST_HIT',
     name: 'Lista restritiva / CEIS',
     documentTypes: ['CPF', 'CNPJ'],
-    condition: { path: 'sections.pldft.restrictiveListHits', operator: 'array_not_empty' },
+    condition: {
+      or: [
+        {
+          documentType: 'CPF',
+          path: 'sections.pldft.restrictiveListHits',
+          operator: 'array_not_empty',
+        },
+        {
+          documentType: 'CNPJ',
+          path: 'sections.sanctions.ceisRecords',
+          operator: 'array_not_empty',
+        },
+      ],
+    },
     weight: 100,
     severity: 'critica',
     hardStop: true,
@@ -16,7 +29,16 @@ const riskRules = [
     code: 'SANCTIONS_HIT',
     name: 'Sanções internacionais',
     documentTypes: ['CPF', 'CNPJ'],
-    condition: { path: 'sections.pldft.sanctionsHits', operator: 'array_not_empty' },
+    condition: {
+      or: [
+        { documentType: 'CPF', path: 'sections.pldft.sanctionsHits', operator: 'array_not_empty' },
+        {
+          documentType: 'CNPJ',
+          path: 'sections.sanctions.internationalHits',
+          operator: 'array_not_empty',
+        },
+      ],
+    },
     weight: 60,
     severity: 'alta',
     hardStop: false,
@@ -27,6 +49,41 @@ const riskRules = [
     documentTypes: ['CPF'],
     condition: { path: 'sections.pldft.isPep', operator: 'truthy' },
     weight: 40,
+    severity: 'alta',
+    hardStop: false,
+    minRiskLevel: 'alto',
+  },
+  {
+    code: 'PJ_PEP_ENTITY',
+    name: 'PEP em entidade PJ',
+    documentTypes: ['CNPJ'],
+    condition: { path: 'sections.sanctions.isCurrentlyPep', operator: 'truthy' },
+    weight: 40,
+    severity: 'alta',
+    hardStop: false,
+    minRiskLevel: 'alto',
+  },
+  {
+    code: 'PJ_SANCTIONED',
+    name: 'Empresa sancionada',
+    documentTypes: ['CNPJ'],
+    condition: { path: 'sections.sanctions.isCurrentlySanctioned', operator: 'truthy' },
+    weight: 80,
+    severity: 'critica',
+    hardStop: true,
+    minRiskLevel: 'muito_alto',
+  },
+  {
+    code: 'CNPJ_IRREGULAR',
+    name: 'CNPJ com situação irregular',
+    documentTypes: ['CNPJ'],
+    condition: {
+      and: [
+        { path: 'sections.cadastral.cnpjStatus', operator: 'truthy' },
+        { path: 'sections.cadastral.cnpjStatus', operator: 'neq', value: 'ATIVA' },
+      ],
+    },
+    weight: 50,
     severity: 'alta',
     hardStop: false,
     minRiskLevel: 'alto',
@@ -53,16 +110,53 @@ const riskRules = [
     code: 'PROTEST_THRESHOLD',
     name: 'Protestos elevados',
     documentTypes: ['CPF', 'CNPJ'],
-    condition: { path: 'sections.financial.protests', operator: 'array_not_empty' },
+    condition: {
+      or: [
+        { documentType: 'CPF', path: 'sections.financial.protests', operator: 'array_not_empty' },
+        {
+          documentType: 'CNPJ',
+          path: 'sections.fiscalHealth.protests',
+          operator: 'array_not_empty',
+        },
+      ],
+    },
     weight: 25,
     severity: 'media',
     hardStop: false,
   },
   {
+    code: 'COLLECTIONS_PRESENCE',
+    name: 'Presença em cobrança',
+    documentTypes: ['CNPJ'],
+    condition: { path: 'sections.credit.collectionsPresence', operator: 'truthy' },
+    weight: 30,
+    severity: 'media',
+    hardStop: false,
+  },
+  {
+    code: 'CERTIFICATE_NEGATIVE',
+    name: 'Certidão negativa',
+    documentTypes: ['CNPJ'],
+    condition: { path: 'sections.certificates', operator: 'certificate_negative' },
+    weight: 50,
+    severity: 'alta',
+    hardStop: false,
+    minRiskLevel: 'alto',
+  },
+  {
     code: 'ESG_SLAVE_LABOR',
     name: 'Trabalho escravo MTE',
     documentTypes: ['CPF', 'CNPJ'],
-    condition: { path: 'sections.esg.slaveLabor', operator: 'truthy' },
+    condition: {
+      or: [
+        { documentType: 'CPF', path: 'sections.esg.slaveLabor', operator: 'truthy' },
+        {
+          documentType: 'CNPJ',
+          path: 'sections.litigationEsg.laborCompliance',
+          operator: 'truthy',
+        },
+      ],
+    },
     weight: 70,
     severity: 'critica',
     hardStop: true,
@@ -72,7 +166,20 @@ const riskRules = [
     code: 'ENVIRONMENTAL_EMBARGO',
     name: 'Embargo ambiental',
     documentTypes: ['CPF', 'CNPJ'],
-    condition: { path: 'sections.esg.environmentalEmbargoes', operator: 'array_not_empty' },
+    condition: {
+      or: [
+        {
+          documentType: 'CPF',
+          path: 'sections.esg.environmentalEmbargoes',
+          operator: 'array_not_empty',
+        },
+        {
+          documentType: 'CNPJ',
+          path: 'sections.litigationEsg.environmentalEmbargoes',
+          operator: 'array_not_empty',
+        },
+      ],
+    },
     weight: 35,
     severity: 'media',
     hardStop: false,
@@ -119,7 +226,7 @@ async function upsertProvider(config: ReturnType<typeof loadProviderSeed>) {
 }
 
 async function main() {
-  for (const file of PROVIDER_SEED_FILES) {
+  for (const file of ALL_PROVIDER_SEED_FILES) {
     await upsertProvider(loadProviderSeed(file));
   }
 
@@ -131,7 +238,7 @@ async function main() {
     });
   }
 
-  console.log('Seed concluído: mock + brasilapi + lemit + risk rules');
+  console.log('Seed concluído: providers + risk rules');
 }
 
 main()

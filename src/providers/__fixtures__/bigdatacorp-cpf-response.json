@@ -1,0 +1,29 @@
+{
+  "Result": [
+    {
+      "MatchKeys": "doc12345678901",
+      "BasicData": {
+        "TaxIdNumber": "12345678901",
+        "TaxIdCountry": "BRAZIL",
+        "Name": "FULANO DE TAL SILVA",
+        "Gender": "M",
+        "BirthDate": "1990-05-15T00:00:00Z",
+        "MotherName": "MARIA DA SILVA",
+        "TaxIdStatus": "REGULAR",
+        "TaxIdStatusDate": "2016-08-23T00:00:00Z"
+      },
+      "KycData": {
+        "IsCurrentlyPEP": true,
+        "IsCurrentlySanctioned": true,
+        "SanctionsHistory": [
+          {
+            "Source": "ofac",
+            "Type": "Money Laundering",
+            "StandardizedSanctionType": "FINANCIAL CRIMES",
+            "MatchRate": 46
+          }
+        ]
+      }
+    }
+  ]
+}

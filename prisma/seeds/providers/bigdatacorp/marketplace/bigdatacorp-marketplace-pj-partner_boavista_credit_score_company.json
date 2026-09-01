@@ -1,0 +1,30 @@
+{
+  "slug": "bigdatacorp-marketplace-pj-partner_boavista_credit_score_company",
+  "name": "BigDataCorp — Dados Restritivos | Birô de Crédito",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/marketplace",
+    "_bdcMeta": {
+      "category": "marketplace",
+      "activationTier": 3,
+      "dataset": "partner_boavista_credit_score_company",
+      "schemaBlocks": []
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "partner_boavista_credit_score_company",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [],
+  "supportedTypes": ["CNPJ"],
+  "isActive": false,
+  "priority": 80
+}

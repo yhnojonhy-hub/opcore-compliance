@@ -3,12 +3,20 @@ export interface FieldMapping {
   target: string;
 }
 
+export interface BdcProviderMeta {
+  category?: string;
+  activationTier?: number;
+  dataset?: string;
+  schemaBlocks?: string[];
+}
+
 export interface RequestTemplate {
   path?: string;
   query?: Record<string, string>;
   body?: Record<string, unknown>;
   headers?: Record<string, string>;
   fixtureKey?: string;
+  _bdcMeta?: BdcProviderMeta;
 }
 
 export interface ProviderConfig {

@@ -1,0 +1,75 @@
+{
+  "slug": "bigdatacorp-pj-basic_data",
+  "name": "BigDataCorp — Dados Básicos",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/empresas",
+    "_bdcMeta": {
+      "category": "empresas",
+      "activationTier": 1,
+      "dataset": "basic_data",
+      "schemaBlocks": ["cadastral"]
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "basic_data",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [
+    {
+      "source": "$.Result[0].BasicData.OfficialName",
+      "target": "sections.cadastral.legalName"
+    },
+    {
+      "source": "$.Result[0].BasicData.TradeName",
+      "target": "sections.cadastral.tradeName"
+    },
+    {
+      "source": "$.Result[0].BasicData.TaxIdStatus",
+      "target": "sections.cadastral.cnpjStatus"
+    },
+    {
+      "source": "$.Result[0].BasicData.FoundedDate",
+      "target": "sections.cadastral.openingDate"
+    },
+    {
+      "source": "$.Result[0].BasicData.Activities[?(@.IsMain==true)].Code",
+      "target": "sections.cadastral.cnae"
+    },
+    {
+      "source": "$.Result[0].BasicData.Activities[?(@.IsMain==true)].Activity",
+      "target": "sections.cadastral.cnaeDescription"
+    },
+    {
+      "source": "$.Result[0].BasicData.Activities",
+      "target": "sections.cadastral.activities"
+    },
+    {
+      "source": "$.Result[0].BasicData.AdditionalOutputData.CapitalRS",
+      "target": "sections.cadastral.capital"
+    },
+    {
+      "source": "$.Result[0].BasicData.LegalNature.Activity",
+      "target": "sections.cadastral.legalNature"
+    },
+    {
+      "source": "$.Result[0].BasicData.HeadquarterState",
+      "target": "sections.cadastral.headquarterState"
+    },
+    {
+      "source": "$.Result[0].BasicData.TaxRegime",
+      "target": "sections.cadastral.taxRegime"
+    }
+  ],
+  "supportedTypes": ["CNPJ"],
+  "isActive": true,
+  "priority": 20
+}

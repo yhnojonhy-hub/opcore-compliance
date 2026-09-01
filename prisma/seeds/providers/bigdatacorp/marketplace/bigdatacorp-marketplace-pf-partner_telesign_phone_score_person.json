@@ -1,0 +1,30 @@
+{
+  "slug": "bigdatacorp-marketplace-pf-partner_telesign_phone_score_person",
+  "name": "BigDataCorp — Score de Risco | Telesign",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/marketplace",
+    "_bdcMeta": {
+      "category": "marketplace",
+      "activationTier": 3,
+      "dataset": "partner_telesign_phone_score_person",
+      "schemaBlocks": []
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "partner_telesign_phone_score_person",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [],
+  "supportedTypes": ["CPF"],
+  "isActive": false,
+  "priority": 80
+}

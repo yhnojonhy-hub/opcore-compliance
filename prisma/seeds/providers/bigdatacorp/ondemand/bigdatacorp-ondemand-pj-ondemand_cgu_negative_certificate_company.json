@@ -1,0 +1,39 @@
+{
+  "slug": "bigdatacorp-ondemand-pj-ondemand_cgu_negative_certificate_company",
+  "name": "BigDataCorp — CGU - Negativa",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/ondemand",
+    "_bdcMeta": {
+      "category": "ondemand",
+      "activationTier": 1,
+      "dataset": "ondemand_cgu_negative_certificate_company",
+      "schemaBlocks": ["certificates", "sanctions"]
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "ondemand_cgu_negative_certificate_company",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [
+    {
+      "source": "$.Result[0].OnlineCertificates",
+      "target": "sections.certificates.cgu"
+    },
+    {
+      "source": "$.Result[0].OnlineCertificates",
+      "target": "sections.sanctions.ceisRecords"
+    }
+  ],
+  "supportedTypes": ["CNPJ"],
+  "isActive": false,
+  "priority": 20
+}

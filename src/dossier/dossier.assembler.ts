@@ -8,13 +8,15 @@ import {
   type PjSections,
 } from '../contracts/types/compliance-dossier.types.js';
 import type { RiskAssessmentResult } from '../contracts/types/compliance-dossier.types.js';
-import { applyFieldMappings, mergeMappedIntoSections } from '../providers/provider.mapper.js';
+import { applyFieldMappings } from '../providers/provider.mapper.js';
 import type { FieldMapping } from '../providers/provider.interface.js';
+import { mergeMappedIntoSectionsIncremental } from './section-merge.js';
 
 interface ConsultationInput {
   providerSlug: string;
   consultedAt: Date;
   cacheHit: boolean;
+  priority: number;
   payload: Record<string, unknown>;
   rawPayload: unknown;
   fieldMappings: FieldMapping[];
@@ -28,7 +30,7 @@ export function computeCompleteness(
   const filled = blocks.filter((block) =>
     Object.values(block).some((v) => v !== null && v !== undefined && v !== ''),
   ).length;
-  const total = documentType === 'CPF' ? 6 : 5;
+  const total = documentType === 'CPF' ? 6 : 8;
   return Math.round((filled / total) * 100) / 100;
 }
 
@@ -53,15 +55,23 @@ export function assembleDossier(params: {
   const sections: PfSections | PjSections =
     params.documentType === 'CPF' ? emptyPfSections() : emptyPjSections();
 
-  for (const c of params.consultations) {
+  const sorted = [...params.consultations].sort(
+    (a, b) => a.consultedAt.getTime() - b.consultedAt.getTime(),
+  );
+
+  for (const c of sorted) {
     const mapped = applyFieldMappings(c.rawPayload, c.fieldMappings);
-    mergeMappedIntoSections(mapped, sections as unknown as Record<string, Record<string, unknown>>);
-    if (Object.keys(mapped).length === 0 && c.payload) {
-      mergeMappedIntoSections(
-        c.payload,
-        sections as unknown as Record<string, Record<string, unknown>>,
-      );
-    }
+    const data = Object.keys(mapped).length > 0 ? mapped : (c.payload as Record<string, unknown>);
+
+    mergeMappedIntoSectionsIncremental(
+      data,
+      sections as unknown as Record<string, Record<string, unknown>>,
+      {
+        priority: c.priority,
+        consultedAt: c.consultedAt,
+        providerSlug: c.providerSlug,
+      },
+    );
   }
 
   const completeness = computeCompleteness(sections, params.documentType);

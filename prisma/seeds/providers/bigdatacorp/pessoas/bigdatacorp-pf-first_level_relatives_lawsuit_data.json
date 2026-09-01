@@ -1,0 +1,30 @@
+{
+  "slug": "bigdatacorp-pf-first_level_relatives_lawsuit_data",
+  "name": "BigDataCorp — Processos Judiciais e Administrativos de Familiares de Primeiro Grau",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/pessoas",
+    "_bdcMeta": {
+      "category": "pessoas",
+      "activationTier": 2,
+      "dataset": "first_level_relatives_lawsuit_data",
+      "schemaBlocks": []
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "first_level_relatives_lawsuit_data",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [],
+  "supportedTypes": ["CPF"],
+  "isActive": false,
+  "priority": 50
+}

@@ -4,12 +4,9 @@ import { RiskLevel as ContractRiskLevel } from '../../contracts/enums/risk-level
 import { prisma } from '../../db/prisma.js';
 import { assembleDossier } from '../../dossier/dossier.assembler.js';
 import { evaluateRisk } from '../../risk/risk.engine.js';
-import {
-  consultDocument,
-  getCachedConsultations,
-  logAudit,
-  toConsultationInput,
-} from './compliance.service.js';
+import { getBdcMaxTier } from '../../providers/provider.tiers.js';
+import { consultAllForDocument } from './compliance.orchestrator.js';
+import { getCachedConsultations, logAudit, toConsultationInput } from './compliance.service.js';
 
 export async function buildDossier(params: {
   document: string;
@@ -17,22 +14,17 @@ export async function buildDossier(params: {
   providerSlug?: string;
   requestedBy?: string;
   forceRefresh?: boolean;
+  maxTier?: number;
 }) {
-  if (!params.forceRefresh) {
-    await consultDocument({
-      document: params.document,
-      documentType: params.documentType,
-      providerSlug: params.providerSlug,
-      requestedBy: params.requestedBy,
-    });
-  } else {
-    await consultDocument({
-      document: params.document,
-      documentType: params.documentType,
-      providerSlug: params.providerSlug,
-      requestedBy: params.requestedBy,
-    });
-  }
+  const maxTier = getBdcMaxTier(params.maxTier);
+
+  await consultAllForDocument({
+    document: params.document,
+    documentType: params.documentType,
+    providerSlug: params.providerSlug,
+    requestedBy: params.requestedBy,
+    maxTier,
+  });
 
   const consultations = await getCachedConsultations(params.document, params.documentType);
   const consultationInputs = consultations.map((c) => toConsultationInput(c, true));
@@ -102,7 +94,7 @@ export async function buildDossier(params: {
   await logAudit({
     action: 'dossier_generated',
     document: params.document,
-    metadata: { version, riskLevel: risk.level },
+    metadata: { version, riskLevel: risk.level, maxTier, providerCount: consultationInputs.length },
   });
 
   return { dossier, assessment: saved.riskAssessment };

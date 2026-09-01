@@ -23,9 +23,10 @@ export async function executeProvider(provider: Provider, ctx: ConsultContext): 
     templateCtx,
   );
   const url = buildUrl(provider.baseUrl, requestTemplate);
+  const rawHeaders = (requestTemplate.headers as Record<string, string>) ?? {};
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...((requestTemplate.headers as Record<string, string>) ?? {}),
+    ...(provider.authType === 'env_headers' ? resolveEnvHeaders(rawHeaders) : rawHeaders),
   };
 
   applyAuth(provider, headers);
@@ -50,7 +51,9 @@ export async function executeProvider(provider: Provider, ctx: ConsultContext): 
 
   const contentType = response.headers.get('content-type') ?? '';
   if (contentType.includes('application/json')) {
-    return response.json();
+    const json = await response.json();
+    assertNoUpstreamStatusErrors(json, provider.slug);
+    return json;
   }
   return { raw: await response.text() };
 }
@@ -66,6 +69,23 @@ function buildUrl(baseUrl: string, template: Record<string, unknown>): string {
     }
   }
   return url.toString();
+}
+
+function resolveEnvHeaders(headers: Record<string, string>): Record<string, string> {
+  const resolved: Record<string, string> = {};
+  for (const [name, value] of Object.entries(headers)) {
+    if (value.startsWith('env:')) {
+      const envVar = value.slice(4);
+      const secret = process.env[envVar];
+      if (!secret) {
+        throw new Error(`Secret ${envVar} não configurado — reinicie a API após definir no .env`);
+      }
+      resolved[name] = secret;
+    } else {
+      resolved[name] = value;
+    }
+  }
+  return resolved;
 }
 
 function applyAuth(provider: Provider, headers: Record<string, string>) {
@@ -87,6 +107,38 @@ function applyAuth(provider: Provider, headers: Record<string, string>) {
     }
     const headerName = headers['X-Api-Key-Header'] ?? 'X-API-Key';
     headers[headerName] = token;
+  }
+}
+
+function assertNoUpstreamStatusErrors(payload: unknown, slug: string): void {
+  if (!payload || typeof payload !== 'object') return;
+  const status = (payload as { Status?: Record<string, unknown> }).Status;
+  if (!status || typeof status !== 'object') return;
+
+  const messages: string[] = [];
+  for (const entries of Object.values(status)) {
+    if (!Array.isArray(entries)) continue;
+    for (const entry of entries) {
+      if (!entry || typeof entry !== 'object') continue;
+      const code = (entry as { Code?: unknown }).Code;
+      const msg = (entry as { Message?: unknown }).Message;
+      const isError =
+        typeof code === 'number'
+          ? code !== 0
+          : typeof msg === 'string' && msg.toUpperCase() !== 'OK';
+      if (isError && typeof msg === 'string' && msg.trim()) {
+        messages.push(msg.trim());
+      }
+    }
+  }
+
+  if (messages.length > 0) {
+    throw new ProviderHttpError(
+      `Provedor ${slug}: ${messages.join('; ')}`,
+      slug,
+      502,
+      JSON.stringify(payload),
+    );
   }
 }
 

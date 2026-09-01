@@ -1,14 +1,26 @@
-import { readFileSync, existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { loadAllProviderSeeds, PROVIDER_SEED_FILES } from '../../prisma/provider-seeds.manifest.js';
+import {
+  ALL_PROVIDER_SEED_FILES,
+  CORE_PROVIDER_SEED_FILES,
+  loadAllProviderSeeds,
+} from '../../prisma/provider-seeds.manifest.js';
 import { providerConfigSchema } from './provider-config.schema.js';
 import { applyFieldMappings } from './provider.mapper.js';
 
 const fixturesDir = join(dirname(fileURLToPath(import.meta.url)), '__fixtures__');
 
 const FIXTURE_EXEMPT_SLUGS = new Set(['mock-provider']);
+
+function isCatalogSeed(slug: string): boolean {
+  return slug.startsWith('bigdatacorp-');
+}
+
+function hasFixture(slug: string): boolean {
+  return existsSync(join(fixturesDir, `${slug}-response.json`));
+}
 
 function loadFixture(slug: string): unknown {
   const path = join(fixturesDir, `${slug}-response.json`);
@@ -19,10 +31,10 @@ function loadFixture(slug: string): unknown {
 describe('provider seeds installation', () => {
   const seeds = loadAllProviderSeeds();
 
-  it('seed.ts manifest includes every provider seed file', () => {
-    expect(PROVIDER_SEED_FILES.length).toBeGreaterThanOrEqual(5);
-    expect(PROVIDER_SEED_FILES).toContain('providers/lemit-cpf.json');
-    expect(PROVIDER_SEED_FILES).toContain('providers/lemit-cnpj.json');
+  it('manifest includes core and catalog seeds', () => {
+    expect(CORE_PROVIDER_SEED_FILES.length).toBeGreaterThanOrEqual(5);
+    expect(ALL_PROVIDER_SEED_FILES.length).toBeGreaterThan(CORE_PROVIDER_SEED_FILES.length);
+    expect(CORE_PROVIDER_SEED_FILES).toContain('providers/bigdatacorp-cnpj.json');
   });
 
   it('has unique slugs', () => {
@@ -37,11 +49,22 @@ describe('provider seeds installation', () => {
 
       expect(parsed.supportedTypes.length).toBeGreaterThan(0);
 
-      if (parsed.authType === 'none' || parsed.authType === 'mock') {
+      if (
+        parsed.authType === 'none' ||
+        parsed.authType === 'mock' ||
+        parsed.authType === 'env_headers'
+      ) {
         expect(parsed.authConfigRef ?? null).toBeNull();
       }
       if (parsed.authType === 'bearer' || parsed.authType === 'api_key_header') {
         expect(parsed.authConfigRef, `${slug} requires authConfigRef`).toBeTruthy();
+      }
+      if (parsed.authType === 'env_headers') {
+        const headerValues = Object.values(parsed.requestTemplate.headers ?? {});
+        expect(
+          headerValues.some((v) => v.startsWith('env:')),
+          `${slug} env_headers requires at least one env: header value`,
+        ).toBe(true);
       }
 
       if (
@@ -52,7 +75,10 @@ describe('provider seeds installation', () => {
         expect(parsed.requestTemplate.path).toContain('{{document}}');
       }
 
-      if (!FIXTURE_EXEMPT_SLUGS.has(slug)) {
+      const needsFixture =
+        !FIXTURE_EXEMPT_SLUGS.has(slug) && (!isCatalogSeed(slug) || hasFixture(slug));
+
+      if (needsFixture) {
         const fixture = loadFixture(slug);
         const mapped = applyFieldMappings(fixture, parsed.fieldMappings);
         expect(Object.keys(mapped).length).toBeGreaterThan(0);

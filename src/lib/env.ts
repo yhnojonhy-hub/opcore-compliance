@@ -20,4 +20,6 @@ export const env = {
   cacheTtlDays: Number(process.env.CACHE_TTL_DAYS ?? 30),
   apiServiceKey: process.env.API_SERVICE_KEY ?? 'dev-api-service-key-change-me',
   defaultProviderSlug: process.env.DEFAULT_PROVIDER_SLUG?.trim() || undefined,
+  bdcMaxTier: Number(process.env.BDC_MAX_TIER ?? 1),
+  bdcConsultConcurrency: Number(process.env.BDC_CONSULT_CONCURRENCY ?? 5),
 };

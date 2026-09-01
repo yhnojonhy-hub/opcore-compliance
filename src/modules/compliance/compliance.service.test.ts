@@ -4,6 +4,7 @@ const mockPrisma = vi.hoisted(() => ({
   complianceConsultation: {
     findUnique: vi.fn(),
     upsert: vi.fn(),
+    update: vi.fn(),
   },
   auditLog: {
     create: vi.fn(),
@@ -65,10 +66,64 @@ describe('compliance.service', () => {
 
     expect(result.cacheHit).toBe(true);
     expect(result.source).toBe('cache');
+    expect(result.payload['sections.cadastral.fullName']).toBe('Maria');
     expect(mockExecuteProvider).not.toHaveBeenCalled();
     expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ action: 'cache_hit' }) }),
     );
+  });
+
+  it('re-maps cached rawPayload with current provider fieldMappings', async () => {
+    const cachedAt = new Date('2026-01-01T00:00:00Z');
+    mockPrisma.complianceConsultation.findUnique.mockResolvedValue({
+      document: '58426534000164',
+      documentType: 'CNPJ',
+      providerId: 'provider-1',
+      payload: { 'sections.cadastral.legalName': 'OLD' },
+      rawPayload: {
+        Result: [
+          {
+            BasicData: {
+              OfficialName: 'INDEX CORE',
+              Activities: [{ IsMain: true, Code: '6630400' }],
+            },
+            KycData: { IsCurrentlyPEP: false, IsCurrentlySanctioned: false },
+          },
+        ],
+      },
+      updatedAt: cachedAt,
+      expiresAt: new Date('2030-01-01'),
+    });
+    mockPrisma.complianceConsultation.update.mockResolvedValue({});
+
+    mockResolveProvider.mockResolvedValue({
+      ...mockProvider,
+      slug: 'bigdatacorp-cnpj',
+      supportedTypes: ['CNPJ'],
+      fieldMappings: [
+        { source: '$.Result[0].BasicData.OfficialName', target: 'sections.cadastral.legalName' },
+        {
+          source: '$.Result[0].BasicData.Activities[?(@.IsMain==true)].Code',
+          target: 'sections.cadastral.cnae',
+        },
+        {
+          source: '$.Result[0].KycData.IsCurrentlyPEP',
+          target: 'sections.sanctions.isCurrentlyPep',
+        },
+      ],
+    });
+
+    const result = await consultDocument({
+      document: '58426534000164',
+      documentType: 'CNPJ',
+      providerSlug: 'bigdatacorp-cnpj',
+    });
+
+    expect(result.cacheHit).toBe(true);
+    expect(result.payload['sections.cadastral.legalName']).toBe('INDEX CORE');
+    expect(result.payload['sections.cadastral.cnae']).toBe('6630400');
+    expect(result.payload['sections.sanctions.isCurrentlyPep']).toBe(false);
+    expect(mockPrisma.complianceConsultation.update).toHaveBeenCalled();
   });
 
   it('calls provider and persists on cache miss', async () => {

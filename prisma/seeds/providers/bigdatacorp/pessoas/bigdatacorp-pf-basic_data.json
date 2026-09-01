@@ -1,0 +1,47 @@
+{
+  "slug": "bigdatacorp-pf-basic_data",
+  "name": "BigDataCorp — Dados Básicos",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/pessoas",
+    "_bdcMeta": {
+      "category": "pessoas",
+      "activationTier": 1,
+      "dataset": "basic_data",
+      "schemaBlocks": ["cadastral"]
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "basic_data",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [
+    {
+      "source": "$.Result[0].BasicData.Name",
+      "target": "sections.cadastral.fullName"
+    },
+    {
+      "source": "$.Result[0].BasicData.TaxIdStatus",
+      "target": "sections.cadastral.cpfStatus"
+    },
+    {
+      "source": "$.Result[0].BasicData.BirthDate",
+      "target": "sections.cadastral.birthDate"
+    },
+    {
+      "source": "$.Result[0].BasicData.MotherName",
+      "target": "sections.cadastral.motherName"
+    }
+  ],
+  "supportedTypes": ["CPF"],
+  "isActive": false,
+  "priority": 20
+}

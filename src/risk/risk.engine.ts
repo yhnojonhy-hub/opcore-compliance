@@ -8,13 +8,76 @@ import type {
 } from '../contracts/types/compliance-dossier.types.js';
 import { RISK_FACTOR_DESCRIPTIONS } from './risk.factors.js';
 
-interface RuleCondition {
-  path: string;
-  operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'truthy' | 'array_not_empty';
+export interface RuleCondition {
+  path?: string;
+  operator?:
+    | 'eq'
+    | 'neq'
+    | 'gt'
+    | 'gte'
+    | 'lt'
+    | 'lte'
+    | 'truthy'
+    | 'array_not_empty'
+    | 'array_length_gte'
+    | 'array_sum_gte'
+    | 'certificate_negative';
   value?: unknown;
+  documentType?: DocumentType;
+  or?: RuleCondition[];
+  and?: RuleCondition[];
 }
 
-export function evaluateCondition(dossier: ComplianceDossier, condition: RuleCondition): boolean {
+function getPathValue(obj: unknown, path: string): unknown {
+  const parts = path.split('.');
+  let current: unknown = obj;
+  for (const part of parts) {
+    if (current == null || typeof current !== 'object') return undefined;
+    current = (current as Record<string, unknown>)[part];
+  }
+  return current;
+}
+
+function sumNumericArray(value: unknown): number {
+  if (!Array.isArray(value)) return 0;
+  return value.reduce((sum, item) => {
+    if (typeof item === 'number') return sum + item;
+    if (item && typeof item === 'object') {
+      const record = item as Record<string, unknown>;
+      const amount = record.value ?? record.amount ?? record.Value ?? record.Amount;
+      const parsed = Number(amount);
+      return Number.isFinite(parsed) ? sum + parsed : sum;
+    }
+    const parsed = Number(item);
+    return Number.isFinite(parsed) ? sum + parsed : sum;
+  }, 0);
+}
+
+function hasNegativeCertificate(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+
+  const walk = (node: unknown): boolean => {
+    if (node == null) return false;
+    if (Array.isArray(node)) return node.some(walk);
+    if (typeof node !== 'object') return false;
+
+    const record = node as Record<string, unknown>;
+    const status = record.status ?? record.Status ?? record.situation ?? record.Situation;
+    if (typeof status === 'string' && /negativ/i.test(status)) return true;
+
+    return Object.values(record).some(walk);
+  };
+
+  return walk(value);
+}
+
+function evaluateLeafCondition(dossier: ComplianceDossier, condition: RuleCondition): boolean {
+  if (condition.documentType && condition.documentType !== dossier.meta.documentType) {
+    return false;
+  }
+
+  if (!condition.path || !condition.operator) return false;
+
   const actual = getPathValue(dossier, condition.path);
 
   switch (condition.operator) {
@@ -34,19 +97,25 @@ export function evaluateCondition(dossier: ComplianceDossier, condition: RuleCon
       return Boolean(actual);
     case 'array_not_empty':
       return Array.isArray(actual) && actual.length > 0;
+    case 'array_length_gte':
+      return Array.isArray(actual) && actual.length >= Number(condition.value);
+    case 'array_sum_gte':
+      return sumNumericArray(actual) >= Number(condition.value);
+    case 'certificate_negative':
+      return hasNegativeCertificate(actual);
     default:
       return false;
   }
 }
 
-function getPathValue(obj: unknown, path: string): unknown {
-  const parts = path.split('.');
-  let current: unknown = obj;
-  for (const part of parts) {
-    if (current == null || typeof current !== 'object') return undefined;
-    current = (current as Record<string, unknown>)[part];
+export function evaluateCondition(dossier: ComplianceDossier, condition: RuleCondition): boolean {
+  if (condition.or?.length) {
+    return condition.or.some((child) => evaluateCondition(dossier, child));
   }
-  return current;
+  if (condition.and?.length) {
+    return condition.and.every((child) => evaluateCondition(dossier, child));
+  }
+  return evaluateLeafCondition(dossier, condition);
 }
 
 function scoreToLevel(score: number): RiskLevel {

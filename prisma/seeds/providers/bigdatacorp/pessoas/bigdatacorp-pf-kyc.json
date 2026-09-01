@@ -1,0 +1,43 @@
+{
+  "slug": "bigdatacorp-pf-kyc",
+  "name": "BigDataCorp — KYC e Compliance",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/pessoas",
+    "_bdcMeta": {
+      "category": "pessoas",
+      "activationTier": 1,
+      "dataset": "kyc",
+      "schemaBlocks": ["pldft", "sanctions"]
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "kyc",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [
+    {
+      "source": "$.Result[0].KycData.IsCurrentlyPEP",
+      "target": "sections.pldft.isPep"
+    },
+    {
+      "source": "$.Result[0].KycData.IsCurrentlySanctioned",
+      "target": "sections.pldft.isSanctioned"
+    },
+    {
+      "source": "$.Result[0].KycData.SanctionsHistory",
+      "target": "sections.pldft.sanctionsHits"
+    }
+  ],
+  "supportedTypes": ["CPF"],
+  "isActive": false,
+  "priority": 20
+}

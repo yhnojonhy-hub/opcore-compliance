@@ -1,0 +1,14 @@
+{
+  "Result": [
+    {
+      "Relationships": [
+        {
+          "Name": "HAYDEE SVAB",
+          "TaxIdNumber": "12345678901",
+          "RelationshipType": "SOCIO",
+          "ParticipationPercentage": 50
+        }
+      ]
+    }
+  ]
+}

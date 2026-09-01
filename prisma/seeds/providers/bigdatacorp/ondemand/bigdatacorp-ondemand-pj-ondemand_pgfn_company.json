@@ -1,0 +1,39 @@
+{
+  "slug": "bigdatacorp-ondemand-pj-ondemand_pgfn_company",
+  "name": "BigDataCorp — PGFN",
+  "baseUrl": "https://plataforma.bigdatacorp.com.br",
+  "httpMethod": "POST",
+  "requestTemplate": {
+    "path": "/ondemand",
+    "_bdcMeta": {
+      "category": "ondemand",
+      "activationTier": 1,
+      "dataset": "ondemand_pgfn_company",
+      "schemaBlocks": ["certificates", "fiscalHealth"]
+    },
+    "headers": {
+      "Accept": "application/json",
+      "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",
+      "TokenId": "env:BIGDATACORP_TOKEN_ID"
+    },
+    "body": {
+      "Datasets": "ondemand_pgfn_company",
+      "q": "doc{{{document}}}",
+      "Limit": 1
+    }
+  },
+  "authType": "env_headers",
+  "fieldMappings": [
+    {
+      "source": "$.Result[0].OnlineCertificates",
+      "target": "sections.certificates.pgfn"
+    },
+    {
+      "source": "$.Result[0].OnlineCertificates",
+      "target": "sections.fiscalHealth.cndFederal"
+    }
+  ],
+  "supportedTypes": ["CNPJ"],
+  "isActive": false,
+  "priority": 20
+}

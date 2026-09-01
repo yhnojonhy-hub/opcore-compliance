@@ -1,0 +1,41 @@
+{
+  "Result": [
+    {
+      "MatchKeys": "doc{58426534000164}",
+      "BasicData": {
+        "TaxIdNumber": "58426534000164",
+        "OfficialName": "INDEX CORE INVESTMENTS ASSET MANAGEMENT LTDA",
+        "TradeName": "",
+        "FoundedDate": "2024-12-11T00:00:00Z",
+        "TaxIdStatus": "ATIVA",
+        "TaxRegime": "LTDA",
+        "HeadquarterState": "SP",
+        "LegalNature": {
+          "Code": "2062",
+          "Activity": "SOCIEDADE EMPRESARIA LIMITADA"
+        },
+        "Activities": [
+          {
+            "IsMain": true,
+            "Code": "6630400",
+            "Activity": "ATIVIDADES DE ADMINISTRACAO DE FUNDOS POR CONTRATO OU COMISSAO"
+          },
+          {
+            "IsMain": false,
+            "Code": "6612605",
+            "Activity": "AGENTES DE INVESTIMENTOS EM APLICACOES FINANCEIRAS"
+          }
+        ],
+        "AdditionalOutputData": {
+          "CapitalRS": "550000.00"
+        }
+      },
+      "KycData": {
+        "IsCurrentlyPEP": false,
+        "IsCurrentlySanctioned": false,
+        "WasPreviouslySanctioned": false,
+        "SanctionsHistory": []
+      }
+    }
+  ]
+}
