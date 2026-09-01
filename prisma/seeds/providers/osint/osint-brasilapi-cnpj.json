@@ -1,0 +1,21 @@
+{
+  "slug": "osint-brasilapi-cnpj",
+  "name": "BrasilAPI CNPJ",
+  "baseUrl": "https://brasilapi.com.br",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-brasilapi-cnpj",
+      "outputMode": "findings",
+      "phase": "sync",
+      "reliability": "COMMUNITY",
+      "findingCategory": "IDENTITY"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["CNPJ"],
+  "isActive": true,
+  "priority": 50
+}

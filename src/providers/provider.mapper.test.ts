@@ -80,6 +80,14 @@ describe('provider.mapper', () => {
     expect(mapped['sections.cadastral.motherName']).toBe('MARIA DA SILVA');
     expect(mapped['sections.pldft.isPep']).toBe(true);
     expect(mapped['sections.pldft.sanctionsHits']).toHaveLength(1);
+    const hit = mapped['sections.pldft.sanctionsHits'] as {
+      matchRate: number;
+      matchConfidence: string;
+    }[];
+    expect(hit[0].matchRate).toBe(46);
+    expect(hit[0].matchConfidence).toBe('weak');
+    expect(mapped['sections.pldft.sanctionsHitsConfirmed']).toEqual([]);
+    expect(mapped['sections.pldft.isSanctioned']).toBe(false);
   });
 
   it('maps BigDataCorp CNPJ response to cadastral and sanctions paths', () => {

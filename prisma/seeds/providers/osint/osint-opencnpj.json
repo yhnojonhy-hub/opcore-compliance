@@ -1,0 +1,21 @@
+{
+  "slug": "osint-opencnpj",
+  "name": "OpenCNPJ",
+  "baseUrl": "https://api.opencnpj.org",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-opencnpj",
+      "outputMode": "findings",
+      "phase": "sync",
+      "reliability": "COMMUNITY",
+      "findingCategory": "IDENTITY"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["CNPJ"],
+  "isActive": true,
+  "priority": 50
+}

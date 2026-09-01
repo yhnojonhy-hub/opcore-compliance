@@ -1,0 +1,21 @@
+{
+  "slug": "osint-fbi-wanted",
+  "name": "FBI Wanted",
+  "baseUrl": "https://example.com",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-fbi-wanted",
+      "outputMode": "findings",
+      "phase": "async",
+      "reliability": "OFFICIAL",
+      "findingCategory": "MANDADO"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["NAME", "PASSAPORTE"],
+  "isActive": true,
+  "priority": 150
+}

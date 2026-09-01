@@ -1,0 +1,21 @@
+{
+  "slug": "osint-emailrep",
+  "name": "EmailRep",
+  "baseUrl": "https://example.com",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-emailrep",
+      "outputMode": "findings",
+      "phase": "async",
+      "reliability": "THIRD_PARTY",
+      "findingCategory": "BREACH"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["EMAIL"],
+  "isActive": true,
+  "priority": 150
+}

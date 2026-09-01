@@ -96,9 +96,9 @@ describe('risk.engine', () => {
     expect(result.complianceStatus).toBe(ComplianceStatus.aprovado);
   });
 
-  it('flags PJ sanctions via internationalHits path', () => {
+  it('flags PJ sanctions via confirmed internationalHits path', () => {
     const sections = emptyPjSections();
-    sections.sanctions.internationalHits = [{ source: 'OFAC' }];
+    sections.sanctions.internationalHitsConfirmed = [{ source: 'ofac', matchRate: 90 }];
     const sanctionsRule = rule({
       code: 'SANCTIONS_HIT',
       name: 'Sanções',
@@ -107,12 +107,12 @@ describe('risk.engine', () => {
         or: [
           {
             documentType: 'CPF',
-            path: 'sections.pldft.sanctionsHits',
+            path: 'sections.pldft.sanctionsHitsConfirmed',
             operator: 'array_not_empty',
           },
           {
             documentType: 'CNPJ',
-            path: 'sections.sanctions.internationalHits',
+            path: 'sections.sanctions.internationalHitsConfirmed',
             operator: 'array_not_empty',
           },
         ],
@@ -188,7 +188,7 @@ describe('risk.engine', () => {
             },
             {
               documentType: 'CNPJ',
-              path: 'sections.sanctions.internationalHits',
+              path: 'sections.sanctions.internationalHitsConfirmed',
               operator: 'array_not_empty',
             },
           ],

@@ -1,0 +1,21 @@
+{
+  "slug": "osint-viacep",
+  "name": "ViaCEP",
+  "baseUrl": "https://viacep.com.br",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-viacep",
+      "outputMode": "findings",
+      "phase": "sync",
+      "reliability": "COMMUNITY",
+      "findingCategory": "ADDRESS"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["CNPJ"],
+  "isActive": true,
+  "priority": 50
+}

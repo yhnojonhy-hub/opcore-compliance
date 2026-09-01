@@ -4,6 +4,19 @@ export function normalizeDocument(raw: string): string {
   return raw.replace(/\D/g, '');
 }
 
+export function digitsOnly(value: string): string {
+  return normalizeDocument(value);
+}
+
+export function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+export function isValidPhone(value: string): boolean {
+  const digits = digitsOnly(value);
+  return digits.length >= 10 && digits.length <= 13;
+}
+
 function calcCpfDigit(digits: number[], factor: number): number {
   let sum = 0;
   for (let i = 0; i < digits.length; i++) {

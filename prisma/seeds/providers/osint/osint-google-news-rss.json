@@ -1,0 +1,21 @@
+{
+  "slug": "osint-google-news-rss",
+  "name": "Google News RSS",
+  "baseUrl": "https://example.com",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-google-news-rss",
+      "outputMode": "findings",
+      "phase": "async",
+      "reliability": "THIRD_PARTY",
+      "findingCategory": "NEWS"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["CNPJ", "CPF", "NAME", "EMAIL"],
+  "isActive": true,
+  "priority": 150
+}

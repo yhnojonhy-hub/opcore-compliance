@@ -1,0 +1,21 @@
+{
+  "slug": "osint-registro-br",
+  "name": "Registro.br",
+  "baseUrl": "https://example.com",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-registro-br",
+      "outputMode": "findings",
+      "phase": "sync",
+      "reliability": "OFFICIAL",
+      "findingCategory": "DOMAIN"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["EMAIL"],
+  "isActive": true,
+  "priority": 50
+}

@@ -18,6 +18,10 @@ function isCatalogSeed(slug: string): boolean {
   return slug.startsWith('bigdatacorp-');
 }
 
+function isOsintSeed(slug: string): boolean {
+  return slug.startsWith('osint-');
+}
+
 function hasFixture(slug: string): boolean {
   return existsSync(join(fixturesDir, `${slug}-response.json`));
 }
@@ -70,13 +74,21 @@ describe('provider seeds installation', () => {
       if (
         parsed.httpMethod === 'GET' &&
         parsed.requestTemplate.path &&
-        parsed.authType !== 'mock'
+        parsed.authType !== 'mock' &&
+        !isOsintSeed(slug)
       ) {
         expect(parsed.requestTemplate.path).toContain('{{document}}');
       }
 
+      if (isOsintSeed(slug)) {
+        expect(parsed.requestTemplate._providerMeta?.adapterRef).toBe(slug);
+        expect(parsed.requestTemplate._providerMeta?.outputMode).toBe('findings');
+      }
+
       const needsFixture =
-        !FIXTURE_EXEMPT_SLUGS.has(slug) && (!isCatalogSeed(slug) || hasFixture(slug));
+        !FIXTURE_EXEMPT_SLUGS.has(slug) &&
+        !isOsintSeed(slug) &&
+        (!isCatalogSeed(slug) || hasFixture(slug));
 
       if (needsFixture) {
         const fixture = loadFixture(slug);

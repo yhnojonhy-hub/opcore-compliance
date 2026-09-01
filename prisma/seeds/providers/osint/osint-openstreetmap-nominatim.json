@@ -1,0 +1,21 @@
+{
+  "slug": "osint-openstreetmap-nominatim",
+  "name": "OpenStreetMap Nominatim",
+  "baseUrl": "https://example.com",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-openstreetmap-nominatim",
+      "outputMode": "findings",
+      "phase": "async",
+      "reliability": "COMMUNITY",
+      "findingCategory": "ADDRESS"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["CNPJ"],
+  "isActive": true,
+  "priority": 150
+}

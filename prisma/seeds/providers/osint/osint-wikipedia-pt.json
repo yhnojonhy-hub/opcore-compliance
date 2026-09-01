@@ -1,0 +1,21 @@
+{
+  "slug": "osint-wikipedia-pt",
+  "name": "Wikipedia PT",
+  "baseUrl": "https://example.com",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-wikipedia-pt",
+      "outputMode": "findings",
+      "phase": "async",
+      "reliability": "COMMUNITY",
+      "findingCategory": "IDENTITY"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["NAME", "CNPJ", "CPF"],
+  "isActive": true,
+  "priority": 150
+}

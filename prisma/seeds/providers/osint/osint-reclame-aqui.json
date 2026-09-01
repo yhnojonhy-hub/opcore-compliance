@@ -1,0 +1,21 @@
+{
+  "slug": "osint-reclame-aqui",
+  "name": "Reclame Aqui",
+  "baseUrl": "https://example.com",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-reclame-aqui",
+      "outputMode": "findings",
+      "phase": "async",
+      "reliability": "THIRD_PARTY",
+      "findingCategory": "REPUTATION"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["CNPJ", "NAME"],
+  "isActive": true,
+  "priority": 150
+}

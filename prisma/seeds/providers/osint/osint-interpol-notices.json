@@ -1,0 +1,21 @@
+{
+  "slug": "osint-interpol-notices",
+  "name": "Interpol Notices",
+  "baseUrl": "https://example.com",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-interpol-notices",
+      "outputMode": "findings",
+      "phase": "async",
+      "reliability": "OFFICIAL",
+      "findingCategory": "TRAVEL_DOC"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["NAME", "PASSAPORTE"],
+  "isActive": true,
+  "priority": 150
+}

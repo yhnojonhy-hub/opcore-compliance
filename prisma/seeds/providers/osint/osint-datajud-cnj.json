@@ -1,0 +1,21 @@
+{
+  "slug": "osint-datajud-cnj",
+  "name": "DataJud CNJ",
+  "baseUrl": "https://api-publica.datajud.cnj.jus.br",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-datajud-cnj",
+      "outputMode": "findings",
+      "phase": "sync",
+      "reliability": "OFFICIAL",
+      "findingCategory": "LAWSUIT"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["CPF", "CNPJ", "NAME"],
+  "isActive": true,
+  "priority": 50
+}

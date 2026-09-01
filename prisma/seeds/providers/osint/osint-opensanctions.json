@@ -1,0 +1,21 @@
+{
+  "slug": "osint-opensanctions",
+  "name": "OpenSanctions",
+  "baseUrl": "https://api.opensanctions.org",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-opensanctions",
+      "outputMode": "findings",
+      "phase": "async",
+      "reliability": "OFFICIAL",
+      "findingCategory": "SANCTION"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["NAME", "CNPJ", "CPF"],
+  "isActive": true,
+  "priority": 150
+}

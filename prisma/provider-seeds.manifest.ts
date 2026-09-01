@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ProviderConfig } from '../src/providers/provider.interface.js';
 import { BIGDATACORP_SEED_FILES } from './bigdatacorp-seeds.manifest.js';
+import { OSINT_SEED_FILES } from './osint-seeds.manifest.js';
 
 const seedsDir = join(dirname(fileURLToPath(import.meta.url)), 'seeds');
 
@@ -21,11 +22,15 @@ export const CORE_PROVIDER_SEED_FILES = [
 export const PROVIDER_SEED_FILES = CORE_PROVIDER_SEED_FILES;
 
 export type CoreProviderSeedFile = (typeof CORE_PROVIDER_SEED_FILES)[number];
-export type ProviderSeedFile = CoreProviderSeedFile | (typeof BIGDATACORP_SEED_FILES)[number];
+export type ProviderSeedFile =
+  | CoreProviderSeedFile
+  | (typeof BIGDATACORP_SEED_FILES)[number]
+  | (typeof OSINT_SEED_FILES)[number];
 
 export const ALL_PROVIDER_SEED_FILES = [
   ...CORE_PROVIDER_SEED_FILES,
   ...BIGDATACORP_SEED_FILES,
+  ...OSINT_SEED_FILES,
 ] as const;
 
 export function loadProviderSeed(file: ProviderSeedFile): ProviderConfig {

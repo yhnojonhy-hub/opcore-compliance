@@ -1,0 +1,21 @@
+{
+  "slug": "osint-brasilapi-ddd",
+  "name": "BrasilAPI DDD",
+  "baseUrl": "https://example.com",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-brasilapi-ddd",
+      "outputMode": "findings",
+      "phase": "sync",
+      "reliability": "COMMUNITY",
+      "findingCategory": "IDENTITY"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["PHONE"],
+  "isActive": true,
+  "priority": 50
+}

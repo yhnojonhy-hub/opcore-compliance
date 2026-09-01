@@ -1,0 +1,21 @@
+{
+  "slug": "osint-portal-da-transparencia",
+  "name": "Portal da Transparência",
+  "baseUrl": "https://api.portaldatransparencia.gov.br",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-portal-da-transparencia",
+      "outputMode": "findings",
+      "phase": "sync",
+      "reliability": "OFFICIAL",
+      "findingCategory": "SANCTION"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["CPF", "CNPJ"],
+  "isActive": true,
+  "priority": 50
+}

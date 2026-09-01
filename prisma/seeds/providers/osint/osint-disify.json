@@ -1,0 +1,21 @@
+{
+  "slug": "osint-disify",
+  "name": "Disify",
+  "baseUrl": "https://www.disify.com",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-disify",
+      "outputMode": "findings",
+      "phase": "sync",
+      "reliability": "THIRD_PARTY",
+      "findingCategory": "BREACH"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["EMAIL"],
+  "isActive": true,
+  "priority": 50
+}

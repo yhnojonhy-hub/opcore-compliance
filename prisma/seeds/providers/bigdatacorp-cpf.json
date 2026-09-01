@@ -5,6 +5,11 @@
   "httpMethod": "POST",
   "requestTemplate": {
     "path": "/pessoas",
+    "_bdcMeta": {
+      "activationTier": 1,
+      "category": "pessoas",
+      "dataset": "kyc"
+    },
     "headers": {
       "Accept": "application/json",
       "AccessToken": "env:BIGDATACORP_ACCESS_TOKEN",

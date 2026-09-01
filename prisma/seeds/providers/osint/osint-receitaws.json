@@ -1,0 +1,21 @@
+{
+  "slug": "osint-receitaws",
+  "name": "ReceitaWS",
+  "baseUrl": "https://www.receitaws.com.br",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-receitaws",
+      "outputMode": "findings",
+      "phase": "sync",
+      "reliability": "THIRD_PARTY",
+      "findingCategory": "IDENTITY"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["CNPJ"],
+  "isActive": true,
+  "priority": 50
+}

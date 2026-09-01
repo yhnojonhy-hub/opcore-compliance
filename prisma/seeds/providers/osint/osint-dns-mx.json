@@ -1,0 +1,21 @@
+{
+  "slug": "osint-dns-mx",
+  "name": "DNS MX",
+  "baseUrl": "https://example.com",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-dns-mx",
+      "outputMode": "findings",
+      "phase": "sync",
+      "reliability": "OFFICIAL",
+      "findingCategory": "DOMAIN"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["EMAIL"],
+  "isActive": true,
+  "priority": 50
+}

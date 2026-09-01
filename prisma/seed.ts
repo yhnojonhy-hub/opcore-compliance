@@ -31,10 +31,14 @@ const riskRules = [
     documentTypes: ['CPF', 'CNPJ'],
     condition: {
       or: [
-        { documentType: 'CPF', path: 'sections.pldft.sanctionsHits', operator: 'array_not_empty' },
+        {
+          documentType: 'CPF',
+          path: 'sections.pldft.sanctionsHitsConfirmed',
+          operator: 'array_not_empty',
+        },
         {
           documentType: 'CNPJ',
-          path: 'sections.sanctions.internationalHits',
+          path: 'sections.sanctions.internationalHitsConfirmed',
           operator: 'array_not_empty',
         },
       ],

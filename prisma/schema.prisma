@@ -25,6 +25,62 @@ enum ComplianceStatus {
   revisao_manual
 }
 
+enum TargetType {
+  CPF
+  CNPJ
+  PHONE
+  EMAIL
+  NAME
+  PASSAPORTE
+}
+
+enum FindingCategory {
+  IDENTITY
+  ADDRESS
+  SANCTION
+  LAWSUIT
+  MANDADO
+  INTIMACAO
+  FINANCIAL
+  SOCIAL_PRESENCE
+  NEWS
+  BREACH
+  DOMAIN
+  ELECTORAL
+  REPUTATION
+  TRAVEL_DOC
+}
+
+enum SourceReliability {
+  OFFICIAL
+  COMMUNITY
+  THIRD_PARTY
+  SCRAPING
+  PAID
+}
+
+enum IntelDossierStatus {
+  PENDING
+  PARTIAL
+  COMPLETED
+  FAILED
+}
+
+enum DossierPurpose {
+  KYC
+  PRE_CONTRACT
+  MA
+  LITIGATION
+  CREDIT
+}
+
+enum DossierLegalBasis {
+  CONTRACT
+  LEGAL_RIGHTS
+  LEGITIMATE_INTEREST
+  CREDIT_PROTECTION
+}
+
 model Provider {
   id              String   @id @default(cuid())
   slug            String   @unique
@@ -121,5 +177,83 @@ model AuditLog {
   createdAt  DateTime  @default(now())
 
   @@index([document])
+  @@index([createdAt])
+}
+
+model IntelDossier {
+  id           String             @id @default(cuid())
+  target       String
+  targetType   TargetType
+  status       IntelDossierStatus @default(PENDING)
+  overallScore Int?
+  purpose      DossierPurpose     @default(KYC)
+  legalBasis   DossierLegalBasis  @default(LEGITIMATE_INTEREST)
+  deepSearch   Boolean            @default(false)
+  partyName    String?
+  tenantId     String?
+  error        String?
+  requestedBy  String?
+  completedAt  DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  sources  IntelDossierSource[]
+  findings IntelDossierFinding[]
+  auditLogs IntelDossierAuditLog[]
+
+  @@index([target])
+  @@index([targetType])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model IntelDossierSource {
+  id         String           @id @default(cuid())
+  dossierId  String
+  dossier    IntelDossier     @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+  name       String
+  providerSlug String?
+  category   FindingCategory
+  reliability SourceReliability
+  status     String
+  httpStatus Int?
+  durationMs Int?
+  error      String?
+  rawPayload Json?
+  createdAt  DateTime         @default(now())
+
+  @@index([dossierId])
+}
+
+model IntelDossierFinding {
+  id          String            @id @default(cuid())
+  dossierId   String
+  dossier     IntelDossier      @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+  category    FindingCategory
+  sourceName  String
+  reliability SourceReliability
+  confidence  Int
+  title       String
+  summary     String
+  details     Json              @default("{}")
+  url         String?
+  occurredAt  DateTime?
+  verified    Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+
+  @@index([dossierId])
+  @@index([category])
+}
+
+model IntelDossierAuditLog {
+  id        String       @id @default(cuid())
+  dossierId String
+  dossier   IntelDossier @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+  action    String
+  actor     String?
+  metadata  Json?
+  createdAt DateTime     @default(now())
+
+  @@index([dossierId])
   @@index([createdAt])
 }

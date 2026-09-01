@@ -22,4 +22,7 @@ export const env = {
   defaultProviderSlug: process.env.DEFAULT_PROVIDER_SLUG?.trim() || undefined,
   bdcMaxTier: Number(process.env.BDC_MAX_TIER ?? 1),
   bdcConsultConcurrency: Number(process.env.BDC_CONSULT_CONCURRENCY ?? 5),
+  bdcSanctionsConfirmedMatchRate: Number(process.env.BDC_SANCTIONS_CONFIRMED_MATCH_RATE ?? 85),
+  intelSyncTimeoutMs: Number(process.env.INTEL_SYNC_TIMEOUT_MS ?? 14_000),
+  intelAsyncTimeoutMs: Number(process.env.INTEL_ASYNC_TIMEOUT_MS ?? 40_000),
 };

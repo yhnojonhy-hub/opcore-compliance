@@ -1,0 +1,21 @@
+{
+  "slug": "osint-minha-receita",
+  "name": "Minha Receita",
+  "baseUrl": "https://minhareceita.org",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-minha-receita",
+      "outputMode": "findings",
+      "phase": "sync",
+      "reliability": "COMMUNITY",
+      "findingCategory": "IDENTITY"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["CNPJ"],
+  "isActive": true,
+  "priority": 50
+}

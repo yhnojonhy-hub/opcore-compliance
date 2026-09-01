@@ -1,0 +1,21 @@
+{
+  "slug": "osint-gdelt-news",
+  "name": "GDELT News",
+  "baseUrl": "https://example.com",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-gdelt-news",
+      "outputMode": "findings",
+      "phase": "async",
+      "reliability": "THIRD_PARTY",
+      "findingCategory": "NEWS"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["NAME", "CNPJ", "CPF", "EMAIL"],
+  "isActive": true,
+  "priority": 150
+}

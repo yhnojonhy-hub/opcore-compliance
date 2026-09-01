@@ -8,6 +8,7 @@ import {
   registerComplianceRoutes,
   registerRiskRuleRoutes,
 } from './modules/compliance/compliance.routes.js';
+import { registerIntelRoutes, registerFullDossierRoute } from './modules/intel/intel.routes.js';
 
 export function createApp() {
   const app = express();
@@ -35,6 +36,8 @@ export function createApp() {
   registerProviderRoutes(app);
   registerComplianceRoutes(app);
   registerRiskRuleRoutes(app);
+  registerIntelRoutes(app);
+  registerFullDossierRoute(app);
 
   return app;
 }

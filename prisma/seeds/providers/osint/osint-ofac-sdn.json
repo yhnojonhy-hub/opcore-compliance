@@ -1,0 +1,21 @@
+{
+  "slug": "osint-ofac-sdn",
+  "name": "OFAC SDN",
+  "baseUrl": "https://sanctionslistservice.ofac.treas.gov",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-ofac-sdn",
+      "outputMode": "findings",
+      "phase": "async",
+      "reliability": "OFFICIAL",
+      "findingCategory": "SANCTION"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["NAME", "CNPJ", "CPF"],
+  "isActive": true,
+  "priority": 150
+}

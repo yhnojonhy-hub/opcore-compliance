@@ -1,0 +1,21 @@
+{
+  "slug": "osint-osint-username",
+  "name": "OSINT username",
+  "baseUrl": "https://example.com",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-osint-username",
+      "outputMode": "findings",
+      "phase": "async",
+      "reliability": "SCRAPING",
+      "findingCategory": "SOCIAL_PRESENCE"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["NAME", "EMAIL", "CPF", "CNPJ"],
+  "isActive": true,
+  "priority": 150
+}

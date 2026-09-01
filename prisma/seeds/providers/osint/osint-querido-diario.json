@@ -1,0 +1,21 @@
+{
+  "slug": "osint-querido-diario",
+  "name": "Querido Diário",
+  "baseUrl": "https://example.com",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-querido-diario",
+      "outputMode": "findings",
+      "phase": "async",
+      "reliability": "COMMUNITY",
+      "findingCategory": "INTIMACAO"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["NAME", "CNPJ", "CPF"],
+  "isActive": true,
+  "priority": 150
+}

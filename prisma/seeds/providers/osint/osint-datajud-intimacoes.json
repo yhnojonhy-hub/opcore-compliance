@@ -1,0 +1,21 @@
+{
+  "slug": "osint-datajud-intimacoes",
+  "name": "DataJud intimações",
+  "baseUrl": "https://example.com",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-datajud-intimacoes",
+      "outputMode": "findings",
+      "phase": "async",
+      "reliability": "OFFICIAL",
+      "findingCategory": "INTIMACAO"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["CPF", "CNPJ", "NAME"],
+  "isActive": true,
+  "priority": 150
+}

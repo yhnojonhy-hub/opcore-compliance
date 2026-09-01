@@ -1,0 +1,21 @@
+{
+  "slug": "osint-wikidata",
+  "name": "Wikidata",
+  "baseUrl": "https://example.com",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-wikidata",
+      "outputMode": "findings",
+      "phase": "async",
+      "reliability": "COMMUNITY",
+      "findingCategory": "IDENTITY"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["NAME", "CNPJ"],
+  "isActive": true,
+  "priority": 150
+}

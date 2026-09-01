@@ -1,0 +1,21 @@
+{
+  "slug": "osint-hunter-io",
+  "name": "Hunter.io",
+  "baseUrl": "https://api.hunter.io",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-hunter-io",
+      "outputMode": "findings",
+      "phase": "sync",
+      "reliability": "THIRD_PARTY",
+      "findingCategory": "BREACH"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["EMAIL"],
+  "isActive": true,
+  "priority": 50
+}

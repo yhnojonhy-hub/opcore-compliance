@@ -1,0 +1,21 @@
+{
+  "slug": "osint-veriphone",
+  "name": "Veriphone",
+  "baseUrl": "https://api.veriphone.io",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-veriphone",
+      "outputMode": "findings",
+      "phase": "sync",
+      "reliability": "THIRD_PARTY",
+      "findingCategory": "IDENTITY"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["PHONE"],
+  "isActive": true,
+  "priority": 50
+}

@@ -1,0 +1,21 @@
+{
+  "slug": "osint-rdap-crt-sh",
+  "name": "RDAP + crt.sh",
+  "baseUrl": "https://example.com",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-rdap-crt-sh",
+      "outputMode": "findings",
+      "phase": "async",
+      "reliability": "OFFICIAL",
+      "findingCategory": "DOMAIN"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["EMAIL", "NAME", "CNPJ"],
+  "isActive": true,
+  "priority": 150
+}

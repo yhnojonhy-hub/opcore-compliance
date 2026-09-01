@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { JSONPath } from 'jsonpath-plus';
 import type { FieldMapping } from './provider.interface.js';
+import { normalizeSanctionsInMapped } from '../dossier/sanctions.normalizer.js';
 
 const fixturesDir = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 
@@ -34,6 +35,7 @@ export function applyFieldMappings(
     }
   }
 
+  normalizeSanctionsInMapped(result);
   return result;
 }
 

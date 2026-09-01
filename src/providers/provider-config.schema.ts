@@ -12,6 +12,15 @@ const bdcMetaSchema = z.object({
   schemaBlocks: z.array(z.string()).optional(),
 });
 
+const providerMetaSchema = z.object({
+  adapterRef: z.string().optional(),
+  outputMode: z.enum(['sections', 'findings', 'both']).optional(),
+  phase: z.enum(['sync', 'async']).optional(),
+  reliability: z.string().optional(),
+  findingCategory: z.string().optional(),
+  timeoutMs: z.number().optional(),
+});
+
 const requestTemplateSchema = z.object({
   path: z.string().optional(),
   query: z.record(z.string()).optional(),
@@ -19,7 +28,17 @@ const requestTemplateSchema = z.object({
   headers: z.record(z.string()).optional(),
   fixtureKey: z.string().optional(),
   _bdcMeta: bdcMetaSchema.optional(),
+  _providerMeta: providerMetaSchema.optional(),
 });
+
+export const SUPPORTED_TARGET_TYPES = [
+  'CPF',
+  'CNPJ',
+  'PHONE',
+  'EMAIL',
+  'NAME',
+  'PASSAPORTE',
+] as const;
 
 export const providerConfigSchema = z.object({
   slug: z.string().min(1),
@@ -30,7 +49,7 @@ export const providerConfigSchema = z.object({
   authType: z.enum(['none', 'bearer', 'api_key_header', 'env_headers', 'mock']),
   authConfigRef: z.string().nullable().optional(),
   fieldMappings: z.array(fieldMappingSchema),
-  supportedTypes: z.array(z.enum(['CPF', 'CNPJ'])).min(1),
+  supportedTypes: z.array(z.enum(SUPPORTED_TARGET_TYPES)).min(1),
   isActive: z.boolean(),
   priority: z.number().int(),
 });

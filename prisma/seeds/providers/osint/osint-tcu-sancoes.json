@@ -1,0 +1,21 @@
+{
+  "slug": "osint-tcu-sancoes",
+  "name": "TCU sanções",
+  "baseUrl": "https://portal.tcu.gov.br",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "_providerMeta": {
+      "adapterRef": "osint-tcu-sancoes",
+      "outputMode": "findings",
+      "phase": "async",
+      "reliability": "OFFICIAL",
+      "findingCategory": "SANCTION"
+    }
+  },
+  "authType": "none",
+  "authConfigRef": null,
+  "fieldMappings": [],
+  "supportedTypes": ["CPF", "CNPJ", "NAME"],
+  "isActive": true,
+  "priority": 150
+}
