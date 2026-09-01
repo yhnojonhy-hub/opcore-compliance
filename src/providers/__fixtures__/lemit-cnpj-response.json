@@ -1,0 +1,14 @@
+{
+  "razao_social": "OPEN KNOWLEDGE BRASIL",
+  "nome_fantasia": "REDE PELO CONHECIMENTO LIVRE",
+  "situacao_cadastral": "ATIVA",
+  "protestos": [
+    {
+      "cartorio": "2º Tabelionato de Protestos",
+      "valor": 3200.5,
+      "data": "2023-11-22",
+      "cidade": "São Paulo",
+      "uf": "SP"
+    }
+  ]
+}

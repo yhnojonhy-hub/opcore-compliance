@@ -3,23 +3,13 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { applyFieldMappings } from './provider.mapper.js';
+import { loadProviderSeed } from '../../prisma/provider-seeds.manifest.js';
 
 const fixturesDir = join(dirname(fileURLToPath(import.meta.url)), '__fixtures__');
 
 function loadFixture(name: string): unknown {
   return JSON.parse(readFileSync(join(fixturesDir, name), 'utf-8'));
 }
-
-const brasilapiCnpjMappings = [
-  { source: '$.razao_social', target: 'sections.cadastral.legalName' },
-  { source: '$.nome_fantasia', target: 'sections.cadastral.tradeName' },
-  { source: '$.descricao_situacao_cadastral', target: 'sections.cadastral.cnpjStatus' },
-  { source: '$.data_inicio_atividade', target: 'sections.cadastral.openingDate' },
-  { source: '$.cnae_fiscal', target: 'sections.cadastral.cnae' },
-  { source: '$.qsa', target: 'sections.corporateStructure.qsa' },
-];
-
-const brasilapiCpfMappings = [{ source: '$.isValid', target: 'sections.cadastral.cpfRegular' }];
 
 describe('provider.mapper', () => {
   it('maps JSONPath to flat targets', () => {
@@ -33,8 +23,9 @@ describe('provider.mapper', () => {
   });
 
   it('maps Brasil API CNPJ response to canonical PJ paths', () => {
+    const seed = loadProviderSeed('providers/brasilapi-cnpj.json');
     const raw = loadFixture('brasilapi-cnpj-response.json');
-    const mapped = applyFieldMappings(raw, brasilapiCnpjMappings);
+    const mapped = applyFieldMappings(raw, seed.fieldMappings);
 
     expect(mapped['sections.cadastral.legalName']).toBe('OPEN KNOWLEDGE BRASIL');
     expect(mapped['sections.cadastral.tradeName']).toBe('REDE PELO CONHECIMENTO LIVRE');
@@ -48,9 +39,33 @@ describe('provider.mapper', () => {
   });
 
   it('maps Brasil API CPF response to cpfRegular', () => {
+    const seed = loadProviderSeed('providers/brasilapi-cpf.json');
     const raw = loadFixture('brasilapi-cpf-response.json');
-    const mapped = applyFieldMappings(raw, brasilapiCpfMappings);
+    const mapped = applyFieldMappings(raw, seed.fieldMappings);
 
     expect(mapped['sections.cadastral.cpfRegular']).toBe(true);
+  });
+
+  it('maps Lemit CPF response to cadastral and financial paths', () => {
+    const seed = loadProviderSeed('providers/lemit-cpf.json');
+    const raw = loadFixture('lemit-cpf-response.json');
+    const mapped = applyFieldMappings(raw, seed.fieldMappings);
+
+    expect(mapped['sections.cadastral.fullName']).toBe('FULANO DE TAL SILVA');
+    expect(mapped['sections.cadastral.cpfStatus']).toBe('REGULAR');
+    expect(mapped['sections.cadastral.birthDate']).toBe('1990-05-15');
+    expect(mapped['sections.cadastral.motherName']).toBe('MARIA DA SILVA');
+    expect(mapped['sections.financial.protests']).toHaveLength(1);
+  });
+
+  it('maps Lemit CNPJ response to cadastral and fiscalHealth paths', () => {
+    const seed = loadProviderSeed('providers/lemit-cnpj.json');
+    const raw = loadFixture('lemit-cnpj-response.json');
+    const mapped = applyFieldMappings(raw, seed.fieldMappings);
+
+    expect(mapped['sections.cadastral.legalName']).toBe('OPEN KNOWLEDGE BRASIL');
+    expect(mapped['sections.cadastral.tradeName']).toBe('REDE PELO CONHECIMENTO LIVRE');
+    expect(mapped['sections.cadastral.cnpjStatus']).toBe('ATIVA');
+    expect(mapped['sections.fiscalHealth.protests']).toHaveLength(1);
   });
 });

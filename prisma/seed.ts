@@ -1,12 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { prisma } from '../src/db/prisma.js';
-const seedsDir = join(dirname(fileURLToPath(import.meta.url)), 'seeds');
-
-function loadJson(name: string) {
-  return JSON.parse(readFileSync(join(seedsDir, name), 'utf-8'));
-}
+import { loadProviderSeed, PROVIDER_SEED_FILES } from './provider-seeds.manifest.js';
 
 const riskRules = [
   {
@@ -95,7 +88,7 @@ const riskRules = [
   },
 ];
 
-async function upsertProvider(config: ReturnType<typeof loadJson>) {
+async function upsertProvider(config: ReturnType<typeof loadProviderSeed>) {
   await prisma.provider.upsert({
     where: { slug: config.slug },
     create: {
@@ -126,14 +119,8 @@ async function upsertProvider(config: ReturnType<typeof loadJson>) {
 }
 
 async function main() {
-  const providerSeeds = [
-    'providers.mock.json',
-    'providers/brasilapi-cnpj.json',
-    'providers/brasilapi-cpf.json',
-  ];
-
-  for (const file of providerSeeds) {
-    await upsertProvider(loadJson(file));
+  for (const file of PROVIDER_SEED_FILES) {
+    await upsertProvider(loadProviderSeed(file));
   }
 
   for (const rule of riskRules) {
@@ -144,7 +131,7 @@ async function main() {
     });
   }
 
-  console.log('Seed concluído: mock-provider + brasilapi + risk rules');
+  console.log('Seed concluído: mock + brasilapi + lemit + risk rules');
 }
 
 main()

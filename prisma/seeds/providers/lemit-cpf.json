@@ -1,0 +1,25 @@
+{
+  "slug": "lemit-cpf",
+  "name": "Lemit — CPF",
+  "baseUrl": "https://api.lemit.com.br",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "path": "/api/v1/consulta/{{document}}",
+    "headers": {
+      "Accept": "application/json",
+      "User-Agent": "OpCore-Compliance/1.0 (homolog)"
+    }
+  },
+  "authType": "bearer",
+  "authConfigRef": "LEMIT_API_TOKEN",
+  "fieldMappings": [
+    { "source": "$.nome", "target": "sections.cadastral.fullName" },
+    { "source": "$.situacao_cadastral", "target": "sections.cadastral.cpfStatus" },
+    { "source": "$.data_nascimento", "target": "sections.cadastral.birthDate" },
+    { "source": "$.nome_mae", "target": "sections.cadastral.motherName" },
+    { "source": "$.protestos", "target": "sections.financial.protests" }
+  ],
+  "supportedTypes": ["CPF"],
+  "isActive": true,
+  "priority": 20
+}

@@ -33,32 +33,33 @@ A API sobe em `http://localhost:3010`.
 
 ## Scripts
 
-| Script               | Descrição                                 |
-| -------------------- | ----------------------------------------- |
-| `npm run dev`        | Servidor em modo watch                    |
-| `npm run build`      | Compila TypeScript → `dist/`              |
-| `npm start`          | Produção (`node dist/index.js`)           |
-| `npm test`           | Testes (Vitest, sem Postgres)             |
-| `npm run lint`       | ESLint                                    |
-| `npm run typecheck`  | Verificação de tipos                      |
-| `npm run db:migrate` | Migrations Prisma                         |
-| `npm run db:seed`    | Seed (mock + brasilapi + regras de risco) |
-| `npm run db:studio`  | Prisma Studio                             |
+| Script               | Descrição                                         |
+| -------------------- | ------------------------------------------------- |
+| `npm run dev`        | Servidor em modo watch                            |
+| `npm run build`      | Compila TypeScript → `dist/`                      |
+| `npm start`          | Produção (`node dist/index.js`)                   |
+| `npm test`           | Testes (Vitest, sem Postgres)                     |
+| `npm run lint`       | ESLint                                            |
+| `npm run typecheck`  | Verificação de tipos                              |
+| `npm run db:migrate` | Migrations Prisma                                 |
+| `npm run db:seed`    | Seed (mock + brasilapi + lemit + regras de risco) |
+| `npm run db:studio`  | Prisma Studio                                     |
 
 ## Variáveis de ambiente
 
 Copie `.env.example` para `.env`:
 
-| Variável                | Descrição                     | Padrão                                                                |
-| ----------------------- | ----------------------------- | --------------------------------------------------------------------- |
-| `PORT`                  | Porta HTTP                    | `3010`                                                                |
-| `DATABASE_URL`          | Postgres                      | `postgresql://compliance:compliance@127.0.0.1:5435/opcore_compliance` |
-| `JWT_SECRET`            | Assinatura do JWT             | —                                                                     |
-| `JWT_EXPIRES_IN`        | Expiração do token            | `8h`                                                                  |
-| `API_SERVICE_KEY`       | Chave para `POST /auth/token` | —                                                                     |
-| `CACHE_TTL_DAYS`        | TTL do cache de consultas     | `30`                                                                  |
-| `CORS_ORIGINS`          | Origens permitidas (vírgula)  | `http://localhost:5173`                                               |
-| `DEFAULT_PROVIDER_SLUG` | Provedor padrão (opcional)    | —                                                                     |
+| Variável                | Descrição                      | Padrão                                                                |
+| ----------------------- | ------------------------------ | --------------------------------------------------------------------- |
+| `PORT`                  | Porta HTTP                     | `3010`                                                                |
+| `DATABASE_URL`          | Postgres                       | `postgresql://compliance:compliance@127.0.0.1:5435/opcore_compliance` |
+| `JWT_SECRET`            | Assinatura do JWT              | —                                                                     |
+| `JWT_EXPIRES_IN`        | Expiração do token             | `8h`                                                                  |
+| `API_SERVICE_KEY`       | Chave para `POST /auth/token`  | —                                                                     |
+| `CACHE_TTL_DAYS`        | TTL do cache de consultas      | `30`                                                                  |
+| `CORS_ORIGINS`          | Origens permitidas (vírgula)   | `http://localhost:5173`                                               |
+| `DEFAULT_PROVIDER_SLUG` | Provedor padrão (opcional)     | —                                                                     |
+| `LEMIT_API_TOKEN`       | Token Bearer Lemit (Etapa 2.2) | —                                                                     |
 
 ## Autenticação
 
@@ -136,6 +137,26 @@ curl -s "http://localhost:3010/v1/compliance/dossier/19131243000197?documentType
 ```
 
 Use `providerSlug=brasilapi-cpf` para validação de CPF (`sections.cadastral.cpfRegular`).
+
+## Homolog — curl (Lemit)
+
+Requer `LEMIT_API_TOKEN` no `.env`. Use slug explícito (`lemit-cpf` / `lemit-cnpj`):
+
+```bash
+# Teste direto na API Lemit (validar token/endpoint com o fornecedor)
+curl -s "https://api.lemit.com.br/api/v1/consulta/10723555079" \
+  -H "Authorization: Bearer $LEMIT_API_TOKEN" \
+  -H "Accept: application/json" \
+  -H "User-Agent: OpCore-Compliance/1.0 (homolog)"
+
+# Via OpCore
+curl -s -X POST http://localhost:3010/v1/compliance/consult \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"document":"10723555079","documentType":"CPF","providerSlug":"lemit-cpf"}' | jq .
+```
+
+Skill: `.cursor/skills/opcore-compliance-lemit/SKILL.md`
 
 ## Estrutura
 

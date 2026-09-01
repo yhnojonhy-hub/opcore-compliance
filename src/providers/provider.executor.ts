@@ -2,6 +2,7 @@ import type { DocumentType, Provider } from '@prisma/client';
 import { env } from '../lib/env.js';
 import type { ConsultContext } from './provider.interface.js';
 import { interpolateTemplate, loadFixture } from './provider.mapper.js';
+import { ProviderHttpError } from './provider.errors.js';
 
 export async function executeProvider(provider: Provider, ctx: ConsultContext): Promise<unknown> {
   const templateCtx = {
@@ -37,7 +38,14 @@ export async function executeProvider(provider: Provider, ctx: ConsultContext): 
 
   const response = await fetch(url, init);
   if (!response.ok) {
-    throw new Error(`Provider ${provider.slug} returned ${response.status}`);
+    const upstreamBody = await response.text();
+    const detail = formatUpstreamBody(upstreamBody);
+    throw new ProviderHttpError(
+      `Provedor ${provider.slug} retornou HTTP ${response.status}${detail ? `: ${detail}` : ''}`,
+      provider.slug,
+      response.status,
+      upstreamBody,
+    );
   }
 
   const contentType = response.headers.get('content-type') ?? '';
@@ -63,13 +71,37 @@ function buildUrl(baseUrl: string, template: Record<string, unknown>): string {
 function applyAuth(provider: Provider, headers: Record<string, string>) {
   if (provider.authType === 'bearer' && provider.authConfigRef) {
     const token = process.env[provider.authConfigRef];
-    if (token) headers.Authorization = `Bearer ${token}`;
+    if (!token) {
+      throw new Error(
+        `Secret ${provider.authConfigRef} não configurado — reinicie a API após definir no .env`,
+      );
+    }
+    headers.Authorization = `Bearer ${token}`;
   }
   if (provider.authType === 'api_key_header' && provider.authConfigRef) {
     const token = process.env[provider.authConfigRef];
+    if (!token) {
+      throw new Error(
+        `Secret ${provider.authConfigRef} não configurado — reinicie a API após definir no .env`,
+      );
+    }
     const headerName = headers['X-Api-Key-Header'] ?? 'X-API-Key';
-    if (token) headers[headerName] = token;
+    headers[headerName] = token;
   }
+}
+
+function formatUpstreamBody(body: string): string {
+  const trimmed = body.trim();
+  if (!trimmed) return '';
+  try {
+    const parsed = JSON.parse(trimmed) as { errors?: unknown; error?: unknown; message?: string };
+    if (Array.isArray(parsed.errors)) return parsed.errors.join(', ');
+    if (typeof parsed.error === 'string') return parsed.error;
+    if (typeof parsed.message === 'string') return parsed.message;
+  } catch {
+    // not JSON
+  }
+  return trimmed.length > 160 ? `${trimmed.slice(0, 160)}…` : trimmed;
 }
 
 export function resolveDocumentTypeFilter(documentType: DocumentType): string {

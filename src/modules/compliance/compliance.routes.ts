@@ -7,6 +7,12 @@ import { requireJwt } from '../../middleware/auth.js';
 import { prisma } from '../../db/prisma.js';
 import { consultDocument, getCachedConsultations } from './compliance.service.js';
 import { buildDossier } from './dossier.service.js';
+import { ProviderHttpError } from '../../providers/provider.errors.js';
+
+function complianceErrorStatus(e: unknown): number {
+  if (e instanceof ProviderHttpError) return 502;
+  return 422;
+}
 
 const consultBodySchema = z.object({
   document: z.string().min(1),
@@ -26,7 +32,7 @@ export function registerComplianceRoutes(app: Express) {
       });
       res.json(result);
     } catch (e) {
-      res.status(422).json({ error: (e as Error).message });
+      res.status(complianceErrorStatus(e)).json({ error: (e as Error).message });
     }
   });
 
@@ -41,7 +47,7 @@ export function registerComplianceRoutes(app: Express) {
       });
       res.json(result);
     } catch (e) {
-      res.status(422).json({ error: (e as Error).message });
+      res.status(complianceErrorStatus(e)).json({ error: (e as Error).message });
     }
   });
 
@@ -61,7 +67,7 @@ export function registerComplianceRoutes(app: Express) {
       });
       res.json(result);
     } catch (e) {
-      res.status(422).json({ error: (e as Error).message });
+      res.status(complianceErrorStatus(e)).json({ error: (e as Error).message });
     }
   });
 
@@ -91,7 +97,7 @@ export function registerComplianceRoutes(app: Express) {
       });
       res.json(dossier);
     } catch (e) {
-      res.status(422).json({ error: (e as Error).message });
+      res.status(complianceErrorStatus(e)).json({ error: (e as Error).message });
     }
   });
 
@@ -107,7 +113,7 @@ export function registerComplianceRoutes(app: Express) {
       });
       res.json(assessment);
     } catch (e) {
-      res.status(422).json({ error: (e as Error).message });
+      res.status(complianceErrorStatus(e)).json({ error: (e as Error).message });
     }
   });
 }

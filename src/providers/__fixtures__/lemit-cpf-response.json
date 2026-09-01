@@ -1,0 +1,15 @@
+{
+  "nome": "FULANO DE TAL SILVA",
+  "situacao_cadastral": "REGULAR",
+  "data_nascimento": "1990-05-15",
+  "nome_mae": "MARIA DA SILVA",
+  "protestos": [
+    {
+      "cartorio": "1º Tabelionato de Protestos",
+      "valor": 1500.0,
+      "data": "2024-01-10",
+      "cidade": "São Paulo",
+      "uf": "SP"
+    }
+  ]
+}

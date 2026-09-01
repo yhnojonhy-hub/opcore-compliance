@@ -1,0 +1,24 @@
+{
+  "slug": "lemit-cnpj",
+  "name": "Lemit — CNPJ",
+  "baseUrl": "https://api.lemit.com.br",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "path": "/api/v1/consulta/{{document}}",
+    "headers": {
+      "Accept": "application/json",
+      "User-Agent": "OpCore-Compliance/1.0 (homolog)"
+    }
+  },
+  "authType": "bearer",
+  "authConfigRef": "LEMIT_API_TOKEN",
+  "fieldMappings": [
+    { "source": "$.razao_social", "target": "sections.cadastral.legalName" },
+    { "source": "$.nome_fantasia", "target": "sections.cadastral.tradeName" },
+    { "source": "$.situacao_cadastral", "target": "sections.cadastral.cnpjStatus" },
+    { "source": "$.protestos", "target": "sections.fiscalHealth.protests" }
+  ],
+  "supportedTypes": ["CNPJ"],
+  "isActive": true,
+  "priority": 20
+}
