@@ -1,0 +1,18 @@
+{
+  "slug": "brasilapi-cpf",
+  "name": "Brasil API — CPF (validação)",
+  "baseUrl": "https://brasilapi.com.br/api",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "path": "/cpf/v1/{{document}}",
+    "headers": {
+      "Accept": "application/json",
+      "User-Agent": "OpCore-Compliance/1.0 (homolog)"
+    }
+  },
+  "authType": "none",
+  "fieldMappings": [{ "source": "$.isValid", "target": "sections.cadastral.cpfRegular" }],
+  "supportedTypes": ["CPF"],
+  "isActive": true,
+  "priority": 30
+}

@@ -1,0 +1,29 @@
+{
+  "uf": "SP",
+  "cep": "01311902",
+  "qsa": [
+    {
+      "pais": null,
+      "nome_socio": "HAYDEE SVAB",
+      "codigo_pais": null,
+      "faixa_etaria": "Entre 41 a 50 anos",
+      "cnpj_cpf_do_socio": "***112108**",
+      "qualificacao_socio": "Presidente",
+      "codigo_faixa_etaria": 5,
+      "data_entrada_sociedade": "2024-02-27",
+      "identificador_de_socio": 2,
+      "cpf_representante_legal": "***000000**",
+      "nome_representante_legal": "",
+      "codigo_qualificacao_socio": 16,
+      "qualificacao_representante_legal": "Não informada",
+      "codigo_qualificacao_representante_legal": 0
+    }
+  ],
+  "cnpj": "19131243000197",
+  "razao_social": "OPEN KNOWLEDGE BRASIL",
+  "nome_fantasia": "REDE PELO CONHECIMENTO LIVRE",
+  "cnae_fiscal": 9430800,
+  "data_inicio_atividade": "2013-10-03",
+  "descricao_situacao_cadastral": "ATIVA",
+  "situacao_cadastral": 2
+}

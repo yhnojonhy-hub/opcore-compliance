@@ -95,36 +95,46 @@ const riskRules = [
   },
 ];
 
-async function main() {
-  const mockProvider = loadJson('providers.mock.json');
-
+async function upsertProvider(config: ReturnType<typeof loadJson>) {
   await prisma.provider.upsert({
-    where: { slug: mockProvider.slug },
+    where: { slug: config.slug },
     create: {
-      slug: mockProvider.slug,
-      name: mockProvider.name,
-      baseUrl: mockProvider.baseUrl,
-      httpMethod: mockProvider.httpMethod,
-      requestTemplate: mockProvider.requestTemplate,
-      authType: mockProvider.authType,
-      authConfigRef: mockProvider.authConfigRef ?? null,
-      fieldMappings: mockProvider.fieldMappings,
-      supportedTypes: mockProvider.supportedTypes,
-      isActive: mockProvider.isActive,
-      priority: mockProvider.priority,
+      slug: config.slug,
+      name: config.name,
+      baseUrl: config.baseUrl,
+      httpMethod: config.httpMethod,
+      requestTemplate: config.requestTemplate,
+      authType: config.authType,
+      authConfigRef: config.authConfigRef ?? null,
+      fieldMappings: config.fieldMappings,
+      supportedTypes: config.supportedTypes,
+      isActive: config.isActive,
+      priority: config.priority,
     },
     update: {
-      name: mockProvider.name,
-      baseUrl: mockProvider.baseUrl,
-      httpMethod: mockProvider.httpMethod,
-      requestTemplate: mockProvider.requestTemplate,
-      authType: mockProvider.authType,
-      fieldMappings: mockProvider.fieldMappings,
-      supportedTypes: mockProvider.supportedTypes,
-      isActive: mockProvider.isActive,
-      priority: mockProvider.priority,
+      name: config.name,
+      baseUrl: config.baseUrl,
+      httpMethod: config.httpMethod,
+      requestTemplate: config.requestTemplate,
+      authType: config.authType,
+      fieldMappings: config.fieldMappings,
+      supportedTypes: config.supportedTypes,
+      isActive: config.isActive,
+      priority: config.priority,
     },
   });
+}
+
+async function main() {
+  const providerSeeds = [
+    'providers.mock.json',
+    'providers/brasilapi-cnpj.json',
+    'providers/brasilapi-cpf.json',
+  ];
+
+  for (const file of providerSeeds) {
+    await upsertProvider(loadJson(file));
+  }
 
   for (const rule of riskRules) {
     await prisma.riskRule.upsert({
@@ -134,7 +144,7 @@ async function main() {
     });
   }
 
-  console.log('Seed concluído: mock-provider + risk rules');
+  console.log('Seed concluído: mock-provider + brasilapi + risk rules');
 }
 
 main()

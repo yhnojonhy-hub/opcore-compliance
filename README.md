@@ -2,7 +2,7 @@
 
 API REST agnóstica de KYC/KYB para consulta de CPF/CNPJ, montagem de dossiê de compliance e avaliação de risco.
 
-Provedores externos são registrados por **configuração** (JSON + `fieldMappings`), sem código por vendor. Na Entrega 1, apenas o `mock-provider` está ativo — respostas vêm de fixtures locais (`authType: mock`).
+Provedores externos são registrados por **configuração** (JSON + `fieldMappings`), sem código por vendor. O `mock-provider` usa fixtures locais (`authType: mock`). Na **Etapa 2.3**, `brasilapi-cnpj` e `brasilapi-cpf` consultam a [Brasil API](https://brasilapi.com.br/docs) gratuitamente (`authType: none`).
 
 ## Stack
 
@@ -33,17 +33,17 @@ A API sobe em `http://localhost:3010`.
 
 ## Scripts
 
-| Script               | Descrição                              |
-| -------------------- | -------------------------------------- |
-| `npm run dev`        | Servidor em modo watch                 |
-| `npm run build`      | Compila TypeScript → `dist/`           |
-| `npm start`          | Produção (`node dist/index.js`)        |
-| `npm test`           | Testes (Vitest, sem Postgres)          |
-| `npm run lint`       | ESLint                                 |
-| `npm run typecheck`  | Verificação de tipos                   |
-| `npm run db:migrate` | Migrations Prisma                      |
-| `npm run db:seed`    | Seed (mock-provider + regras de risco) |
-| `npm run db:studio`  | Prisma Studio                          |
+| Script               | Descrição                                 |
+| -------------------- | ----------------------------------------- |
+| `npm run dev`        | Servidor em modo watch                    |
+| `npm run build`      | Compila TypeScript → `dist/`              |
+| `npm start`          | Produção (`node dist/index.js`)           |
+| `npm test`           | Testes (Vitest, sem Postgres)             |
+| `npm run lint`       | ESLint                                    |
+| `npm run typecheck`  | Verificação de tipos                      |
+| `npm run db:migrate` | Migrations Prisma                         |
+| `npm run db:seed`    | Seed (mock + brasilapi + regras de risco) |
+| `npm run db:studio`  | Prisma Studio                             |
 
 ## Variáveis de ambiente
 
@@ -97,6 +97,46 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 A segunda consulta do mesmo documento/provedor retorna **cache** (`cacheHit: true`).
 
+## UI de homolog (recomendado)
+
+Para testar consultas sem curl, use o frontend em [`../web/`](../web/):
+
+```bash
+cd ../web && cp .env.example .env && npm ci && npm run dev
+```
+
+Abra **http://localhost:5173** (API deve estar em `localhost:3010`).
+
+## Homolog — curl (Brasil API)
+
+Após `npm run db:seed`, consulte um CNPJ real via Brasil API (sem secret):
+
+```bash
+# Token JWT
+export TOKEN=$(curl -s -X POST http://localhost:3010/auth/token \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: dev-api-service-key-change-me" \
+  -d '{"sub":"homolog","service":"opcore"}' | jq -r .token)
+
+# Consulta CNPJ (ex.: Open Knowledge Brasil)
+curl -s -X POST http://localhost:3010/v1/compliance/consult \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"document":"19131243000197","documentType":"CNPJ","providerSlug":"brasilapi-cnpj"}' | jq .
+
+# Segunda chamada → cache
+curl -s -X POST http://localhost:3010/v1/compliance/consult \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"document":"19131243000197","documentType":"CNPJ","providerSlug":"brasilapi-cnpj"}' | jq .source
+
+# Dossiê agregado (mock + brasilapi se ambos consultados)
+curl -s "http://localhost:3010/v1/compliance/dossier/19131243000197?documentType=CNPJ" \
+  -H "Authorization: Bearer $TOKEN" | jq .
+```
+
+Use `providerSlug=brasilapi-cpf` para validação de CPF (`sections.cadastral.cpfRegular`).
+
 ## Estrutura
 
 ```
@@ -124,6 +164,7 @@ Na raiz do repositório (`opcore-compliance/docs/`):
 - [PROVIDER-CONFIG.md](../docs/PROVIDER-CONFIG.md) — registro de provedores
 - [DATABASE.md](../docs/DATABASE.md) — modelo de dados
 - [CICD.md](../docs/CICD.md) — pipeline e qualidade
+- [web/README.md](../web/README.md) — UI de consulta CPF/CNPJ
 
 ## CI
 

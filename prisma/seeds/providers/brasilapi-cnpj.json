@@ -1,0 +1,25 @@
+{
+  "slug": "brasilapi-cnpj",
+  "name": "Brasil API — CNPJ (Minha Receita)",
+  "baseUrl": "https://brasilapi.com.br/api",
+  "httpMethod": "GET",
+  "requestTemplate": {
+    "path": "/cnpj/v1/{{document}}",
+    "headers": {
+      "Accept": "application/json",
+      "User-Agent": "OpCore-Compliance/1.0 (homolog)"
+    }
+  },
+  "authType": "none",
+  "fieldMappings": [
+    { "source": "$.razao_social", "target": "sections.cadastral.legalName" },
+    { "source": "$.nome_fantasia", "target": "sections.cadastral.tradeName" },
+    { "source": "$.descricao_situacao_cadastral", "target": "sections.cadastral.cnpjStatus" },
+    { "source": "$.data_inicio_atividade", "target": "sections.cadastral.openingDate" },
+    { "source": "$.cnae_fiscal", "target": "sections.cadastral.cnae" },
+    { "source": "$.qsa", "target": "sections.corporateStructure.qsa" }
+  ],
+  "supportedTypes": ["CNPJ"],
+  "isActive": true,
+  "priority": 30
+}
