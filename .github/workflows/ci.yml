@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+        env:
+          HUSKY: '0'
+          DATABASE_URL: postgresql://compliance:compliance@127.0.0.1:5432/opcore_compliance
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Typecheck
+        run: npm run typecheck
+        env:
+          DATABASE_URL: postgresql://compliance:compliance@127.0.0.1:5432/opcore_compliance
+
+      - name: Test
+        run: npm run test
+        env:
+          DATABASE_URL: postgresql://compliance:compliance@127.0.0.1:5432/opcore_compliance
+
+      - name: Build
+        run: npm run build
+        env:
+          DATABASE_URL: postgresql://compliance:compliance@127.0.0.1:5432/opcore_compliance

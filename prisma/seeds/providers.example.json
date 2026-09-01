@@ -1,0 +1,61 @@
+[
+  {
+    "slug": "bigdatacorp",
+    "name": "BigDataCorp",
+    "baseUrl": "https://api.bigdatacorp.com.br",
+    "httpMethod": "POST",
+    "requestTemplate": {
+      "path": "/pessoas",
+      "body": { "Datasets": "basic_data", "q": "doc{{document}}" }
+    },
+    "authType": "bearer",
+    "authConfigRef": "BIGDATACORP_API_TOKEN",
+    "fieldMappings": [
+      { "source": "$.Result[0].BasicData.Name", "target": "sections.cadastral.fullName" },
+      { "source": "$.Result[0].BasicData.TaxIdStatus", "target": "sections.cadastral.cpfStatus" },
+      { "source": "$.Result[0].KycData.IsCurrentlyPEP", "target": "sections.pldft.isPep" }
+    ],
+    "supportedTypes": ["CPF", "CNPJ"],
+    "isActive": false,
+    "priority": 10
+  },
+  {
+    "slug": "lemit",
+    "name": "Lemit",
+    "baseUrl": "https://api.lemit.com.br",
+    "httpMethod": "GET",
+    "requestTemplate": {
+      "path": "/api/v1/consulta/{{document}}",
+      "headers": { "Accept": "application/json" }
+    },
+    "authType": "bearer",
+    "authConfigRef": "LEMIT_API_TOKEN",
+    "fieldMappings": [
+      { "source": "$.nome", "target": "sections.cadastral.fullName" },
+      { "source": "$.situacao_cadastral", "target": "sections.cadastral.cpfStatus" },
+      { "source": "$.protestos", "target": "sections.financial.protests" }
+    ],
+    "supportedTypes": ["CPF", "CNPJ"],
+    "isActive": false,
+    "priority": 20
+  },
+  {
+    "slug": "apibrasil",
+    "name": "ApiBrasil",
+    "baseUrl": "https://gateway.apibrasil.io",
+    "httpMethod": "POST",
+    "requestTemplate": {
+      "path": "/api/v2/consulta",
+      "body": { "tipo": "{{documentType}}", "documento": "{{document}}" }
+    },
+    "authType": "bearer",
+    "authConfigRef": "APIBRASIL_API_TOKEN",
+    "fieldMappings": [
+      { "source": "$.response.processos", "target": "sections.litigation.lawsuits" },
+      { "source": "$.response.trabalho_escravo", "target": "sections.esg.slaveLabor" }
+    ],
+    "supportedTypes": ["CPF", "CNPJ"],
+    "isActive": false,
+    "priority": 30
+  }
+]

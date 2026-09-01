@@ -1,0 +1,22 @@
+{
+  "slug": "mock-provider",
+  "name": "Mock Provider (testes)",
+  "baseUrl": "mock://local",
+  "httpMethod": "GET",
+  "requestTemplate": {},
+  "authType": "mock",
+  "fieldMappings": [
+    { "source": "$.data.fullName", "target": "sections.cadastral.fullName" },
+    { "source": "$.data.cpfStatus", "target": "sections.cadastral.cpfStatus" },
+    { "source": "$.data.cpfRegular", "target": "sections.cadastral.cpfRegular" },
+    { "source": "$.data.isPep", "target": "sections.pldft.isPep" },
+    { "source": "$.data.birthDate", "target": "sections.cadastral.birthDate" },
+    { "source": "$.data.motherName", "target": "sections.cadastral.motherName" },
+    { "source": "$.data.legalName", "target": "sections.cadastral.legalName" },
+    { "source": "$.data.tradeName", "target": "sections.cadastral.tradeName" },
+    { "source": "$.data.cnpjStatus", "target": "sections.cadastral.cnpjStatus" }
+  ],
+  "supportedTypes": ["CPF", "CNPJ"],
+  "isActive": true,
+  "priority": 1
+}

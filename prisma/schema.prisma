@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum DocumentType {
+  CPF
+  CNPJ
+}
+
+enum RiskLevel {
+  baixo
+  medio
+  alto
+  muito_alto
+}
+
+enum ComplianceStatus {
+  aprovado
+  pendente
+  rejeitado
+  revisao_manual
+}
+
+model Provider {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  baseUrl         String
+  httpMethod      String
+  requestTemplate Json
+  authType        String
+  authConfigRef   String?
+  fieldMappings   Json
+  supportedTypes  String[]
+  isActive        Boolean  @default(true)
+  priority        Int      @default(100)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  consultations ComplianceConsultation[]
+  auditLogs     AuditLog[]
+}
+
+model ComplianceConsultation {
+  id           String       @id @default(cuid())
+  document     String
+  documentType DocumentType
+  providerId   String
+  provider     Provider     @relation(fields: [providerId], references: [id])
+  payload      Json
+  rawPayload   Json
+  requestedBy  String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  expiresAt    DateTime?
+
+  @@unique([document, documentType, providerId])
+  @@index([document])
+  @@index([createdAt])
+}
+
+model ComplianceDossier {
+  id           String       @id @default(cuid())
+  document     String
+  documentType DocumentType
+  version      Int          @default(1)
+  payload      Json
+  completeness Float
+  hash         String
+  requestedBy  String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  riskAssessment RiskAssessment?
+
+  @@unique([document, documentType, version])
+  @@index([document])
+  @@index([createdAt])
+}
+
+model RiskAssessment {
+  id                   String            @id @default(cuid())
+  dossierId            String            @unique
+  dossier              ComplianceDossier @relation(fields: [dossierId], references: [id])
+  level                RiskLevel
+  score                Int
+  factors              Json
+  complianceStatus     ComplianceStatus
+  blocked              Boolean           @default(false)
+  requiresManualReview Boolean           @default(false)
+  recommendation       String?
+  createdAt            DateTime          @default(now())
+}
+
+model RiskRule {
+  id            String     @id @default(cuid())
+  code          String     @unique
+  name          String
+  documentTypes String[]
+  condition     Json
+  weight        Int
+  severity      String
+  hardStop      Boolean    @default(false)
+  minRiskLevel  RiskLevel?
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  action     String
+  document   String
+  providerId String?
+  provider   Provider? @relation(fields: [providerId], references: [id])
+  metadata   Json?
+  createdAt  DateTime  @default(now())
+
+  @@index([document])
+  @@index([createdAt])
+}

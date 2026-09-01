@@ -1,0 +1,13 @@
+{
+  "data": {
+    "fullName": "Maria Silva",
+    "cpfStatus": "REGULAR",
+    "cpfRegular": true,
+    "isPep": false,
+    "birthDate": "1985-03-15",
+    "motherName": "Ana Silva",
+    "protests": [],
+    "sanctionsHits": [],
+    "restrictiveListHits": []
+  }
+}
