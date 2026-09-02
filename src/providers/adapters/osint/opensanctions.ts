@@ -152,11 +152,69 @@ function queriesOf(ctx: ProviderContext): { names: string[]; document: string | 
   return { names: [...new Set(names)].slice(0, 4), document };
 }
 
+const SCHEMA_LABEL: Record<string, string> = {
+  Position: 'Cargo',
+  Person: 'Pessoa',
+  Company: 'Empresa',
+  Organization: 'Organização',
+  LegalEntity: 'Entidade legal',
+};
+
+const DATASET_LABEL: Record<string, string> = {
+  ann_pep_positions: 'Cargos PEP (lista internacional)',
+  br_pep: 'PEP — Brasil',
+  wd_categories: 'Categorias Wikidata',
+  wikidata: 'Wikidata',
+  wd_peps: 'PEPs — Wikidata',
+  everypolitician: 'EveryPolitician',
+  br_chamber_deputies: 'Câmara dos Deputados (BR)',
+  sanctions: 'Sanções internacionais',
+};
+
+function labelSchema(value: string): string {
+  return SCHEMA_LABEL[value] ?? SCHEMA_LABEL[value.trim()] ?? value;
+}
+
+function labelDataset(value: string): string {
+  return DATASET_LABEL[value] ?? value.replace(/[_-]+/g, ' ');
+}
+
+function labelDatasets(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => labelDataset(String(item)))
+      .slice(0, 4)
+      .join(', ');
+  }
+  if (typeof value === 'string' && value.trim()) {
+    return value
+      .split(/[,;]/)
+      .map((part) => labelDataset(part.trim()))
+      .filter(Boolean)
+      .join(', ');
+  }
+  return '';
+}
+
+function translateCaption(caption: string): string {
+  return caption
+    .replace(/^Mayor\b/i, 'Prefeito(a)')
+    .replace(/^Councilor\b/i, 'Vereador(a)')
+    .replace(/^Councillor\b/i, 'Vereador(a)');
+}
+
 function findingFromRow(row: SanctionRow, via: string): ProviderFinding {
+  const title = translateCaption(row.caption || row.name || row.id);
+  const parts = [
+    labelSchema(row.schema),
+    labelDataset(row.dataset),
+    row.countries ? `País: ${row.countries.toUpperCase()}` : '',
+    via,
+  ].filter(Boolean);
   return {
     category: 'SANCTION',
-    title: row.caption || row.name || row.id,
-    summary: [row.schema, row.dataset, row.countries, via].filter(Boolean).join(' · '),
+    title,
+    summary: parts.join(' · '),
     details: row,
     confidence: 86,
     url: row.id
@@ -169,16 +227,15 @@ function findingFromApi(row: unknown): ProviderFinding | null {
   const item = asRecord(row);
   const caption = String(item.caption ?? item.id ?? '').trim();
   if (!caption) return null;
-  const datasets = Array.isArray(item.datasets)
-    ? item.datasets.map(String).slice(0, 4).join(', ')
-    : '';
+  const datasets = labelDatasets(item.datasets);
   const id = String(item.id ?? '');
+  const scoreRaw = item.score;
+  const score =
+    scoreRaw == null || scoreRaw === '' || scoreRaw === '-' ? '' : `confiança ${String(scoreRaw)}`;
   return {
     category: 'SANCTION',
-    title: caption,
-    summary: [String(item.schema ?? ''), datasets, `score ${String(item.score ?? '-')}`]
-      .filter(Boolean)
-      .join(' · '),
+    title: translateCaption(caption),
+    summary: [labelSchema(String(item.schema ?? '')), datasets, score].filter(Boolean).join(' · '),
     details: item,
     confidence: 90,
     url: id ? `https://www.opensanctions.org/entities/${id}` : 'https://www.opensanctions.org',
