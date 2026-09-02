@@ -33,7 +33,9 @@ A API sobe em `http://localhost:3010`.
 
 ## Deploy com Docker (servidor)
 
-Build e run na rede `caddy` (Postgres em `opcore-compliance-postgres`):
+Produção: **https://api.compliance.opcore.com.br** (Caddy na rede `caddy`).
+
+Build e run (Postgres em `opcore-compliance-postgres`):
 
 ```bash
 cd api
@@ -45,19 +47,31 @@ docker run -d \
   --network caddy \
   --restart unless-stopped \
   --env-file .env \
+  -e NODE_ENV=production \
   -e RUN_DB_SEED=true \
-  --label caddy=compliance-api.seudominio.com \
+  --label caddy=api.compliance.opcore.com.br \
   --label caddy.reverse_proxy="{{upstreams 3010}}" \
   opcore-compliance-api:latest
 
 # subidas seguintes (sem seed)
-docker run -d ... opcore-compliance-api:latest
+docker rm -f opcore-compliance-api
+docker run -d \
+  --name opcore-compliance-api \
+  --network caddy \
+  --restart unless-stopped \
+  --env-file .env \
+  -e NODE_ENV=production \
+  --label caddy=api.compliance.opcore.com.br \
+  --label caddy.reverse_proxy="{{upstreams 3010}}" \
+  opcore-compliance-api:latest
 ```
 
-`DATABASE_URL` no `.env` do servidor:
+`.env` no servidor:
 
 ```env
+NODE_ENV=production
 DATABASE_URL=postgresql://opcore:SENHA@opcore-compliance-postgres:5432/opcore_compliance
+CORS_ORIGINS=https://compliance.opcore.com.br
 ```
 
 O entrypoint executa `prisma migrate deploy` automaticamente. Use `RUN_DB_SEED=true` apenas na primeira vez.
