@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { JSONPath } from 'jsonpath-plus';
 import type { FieldMapping } from './provider.interface.js';
-import { normalizeSanctionsInMapped } from '../dossier/sanctions.normalizer.js';
+import { normalizeMappedPayload } from '../dossier/normalizers/index.js';
 
 const fixturesDir = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 
@@ -35,8 +35,7 @@ export function applyFieldMappings(
     }
   }
 
-  normalizeSanctionsInMapped(result);
-  return result;
+  return normalizeMappedPayload(result);
 }
 
 /** Prefer fresh mapping from raw; fall back to stored payload when raw is empty. */
@@ -48,41 +47,6 @@ export function resolveMappedPayload(
   const mapped = applyFieldMappings(rawPayload, fieldMappings);
   if (Object.keys(mapped).length > 0) return mapped;
   return storedPayload ?? {};
-}
-
-export function mergeMappedIntoSections(
-  mapped: Record<string, unknown>,
-  sections: Record<string, Record<string, unknown>>,
-): void {
-  for (const [key, value] of Object.entries(mapped)) {
-    if (key.startsWith('sections.')) {
-      const parts = key.replace(/^sections\./, '').split('.');
-      let current: Record<string, unknown> = sections;
-      for (let i = 0; i < parts.length - 1; i++) {
-        const part = parts[i];
-        if (!current[part] || typeof current[part] !== 'object') {
-          current[part] = {};
-        }
-        current = current[part] as Record<string, unknown>;
-      }
-      current[parts[parts.length - 1]] = value;
-    } else {
-      setNestedValue(sections as Record<string, unknown>, key, value);
-    }
-  }
-}
-
-function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown) {
-  const parts = path.split('.');
-  let current = obj;
-  for (let i = 0; i < parts.length - 1; i++) {
-    const part = parts[i];
-    if (!current[part] || typeof current[part] !== 'object') {
-      current[part] = {};
-    }
-    current = current[part] as Record<string, unknown>;
-  }
-  current[parts[parts.length - 1]] = value;
 }
 
 export function loadFixture(fixtureKey: string): unknown {

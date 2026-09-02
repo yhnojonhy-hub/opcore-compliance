@@ -59,6 +59,7 @@ export async function consultAllForDocument(params: {
   maxTier?: number;
   concurrency?: number;
   failFast?: boolean;
+  forceRefresh?: boolean;
 }): Promise<ConsultResult[]> {
   if (params.providerSlug) {
     return [
@@ -67,6 +68,7 @@ export async function consultAllForDocument(params: {
         documentType: params.documentType,
         providerSlug: params.providerSlug,
         requestedBy: params.requestedBy,
+        forceRefresh: params.forceRefresh,
       }),
     ];
   }
@@ -83,6 +85,7 @@ export async function consultAllForDocument(params: {
         documentType: params.documentType,
         providerSlug: provider.slug,
         requestedBy: params.requestedBy,
+        forceRefresh: params.forceRefresh,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

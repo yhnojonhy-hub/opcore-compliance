@@ -65,4 +65,5 @@ export interface CreateIntelDossierInput {
   tenantId?: string;
   requestedBy?: string;
   includeBureau?: boolean;
+  forceRefresh?: boolean;
 }

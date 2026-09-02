@@ -1,12 +1,12 @@
 import type {
-  DossierTargetType,
   FindingCategory,
   SourceReliability,
+  TargetType,
 } from '../../contracts/enums/intel.enums.js';
 
 export interface ProviderContext {
   target: string;
-  targetType: DossierTargetType;
+  targetType: TargetType;
   partyName?: string;
   aliases: string[];
   deepSearch: boolean;
@@ -41,7 +41,7 @@ export interface DossierProvider {
   name: string;
   category: FindingCategory;
   reliability: SourceReliability;
-  accepts: DossierTargetType[];
+  accepts: TargetType[];
   phase: 'sync' | 'async';
   rateMs: number;
   run(ctx: ProviderContext): Promise<ProviderResult>;

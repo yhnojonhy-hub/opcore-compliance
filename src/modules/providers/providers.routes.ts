@@ -1,26 +1,12 @@
 import type { Express } from 'express';
-import { z } from 'zod';
 import { requireJwt } from '../../middleware/auth.js';
+import { providerConfigSchema } from '../../providers/provider-config.schema.js';
 import {
   createProvider,
   getProviderBySlug,
   listActiveProviders,
   updateProvider,
 } from '../../providers/provider.registry.js';
-
-const providerSchema = z.object({
-  slug: z.string().min(1),
-  name: z.string().min(1),
-  baseUrl: z.string().min(1),
-  httpMethod: z.string().min(1),
-  requestTemplate: z.record(z.string(), z.unknown()),
-  authType: z.string().min(1),
-  authConfigRef: z.string().nullable().optional(),
-  fieldMappings: z.array(z.object({ source: z.string(), target: z.string() })),
-  supportedTypes: z.array(z.enum(['CPF', 'CNPJ'])),
-  isActive: z.boolean().default(true),
-  priority: z.number().int().default(100),
-});
 
 export function registerProviderRoutes(app: Express) {
   app.get('/v1/providers', requireJwt, async (_req, res) => {
@@ -29,7 +15,7 @@ export function registerProviderRoutes(app: Express) {
   });
 
   app.post('/v1/providers', requireJwt, async (req, res) => {
-    const parsed = providerSchema.safeParse(req.body);
+    const parsed = providerConfigSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.flatten() });
       return;
@@ -44,7 +30,7 @@ export function registerProviderRoutes(app: Express) {
   });
 
   app.put('/v1/providers/:slug', requireJwt, async (req, res) => {
-    const parsed = providerSchema.partial().safeParse(req.body);
+    const parsed = providerConfigSchema.partial().safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.flatten() });
       return;

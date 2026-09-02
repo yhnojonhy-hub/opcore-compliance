@@ -66,7 +66,7 @@ describe('compliance.service', () => {
 
     expect(result.cacheHit).toBe(true);
     expect(result.source).toBe('cache');
-    expect(result.payload['sections.cadastral.fullName']).toBe('Maria');
+    expect(result.payload.sections.cadastral.fullName).toBe('Maria');
     expect(mockExecuteProvider).not.toHaveBeenCalled();
     expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ action: 'cache_hit' }) }),
@@ -120,10 +120,39 @@ describe('compliance.service', () => {
     });
 
     expect(result.cacheHit).toBe(true);
-    expect(result.payload['sections.cadastral.legalName']).toBe('INDEX CORE');
-    expect(result.payload['sections.cadastral.cnae']).toBe('6630400');
-    expect(result.payload['sections.sanctions.isCurrentlyPep']).toBe(false);
+    expect(result.payload.sections.cadastral.legalName).toBe('INDEX CORE');
+    expect(result.payload.sections.cadastral.cnae).toBe('6630400');
+    expect(result.payload.sections.sanctions.isCurrentlyPep).toBe(false);
     expect(mockPrisma.complianceConsultation.update).toHaveBeenCalled();
+  });
+
+  it('bypasses cache when forceRefresh is true', async () => {
+    const cachedAt = new Date('2026-01-01T00:00:00Z');
+    mockPrisma.complianceConsultation.findUnique.mockResolvedValue({
+      document: '52998224725',
+      documentType: 'CPF',
+      providerId: 'provider-1',
+      payload: { 'sections.cadastral.fullName': 'Maria' },
+      rawPayload: { data: { fullName: 'Maria' } },
+      updatedAt: cachedAt,
+      expiresAt: new Date('2030-01-01'),
+    });
+    mockExecuteProvider.mockResolvedValue({ data: { fullName: 'João' } });
+    mockPrisma.complianceConsultation.upsert.mockResolvedValue({});
+
+    const result = await consultDocument({
+      document: '52998224725',
+      documentType: 'CPF',
+      forceRefresh: true,
+    });
+
+    expect(result.cacheHit).toBe(false);
+    expect(result.source).toBe('provider');
+    expect(mockPrisma.complianceConsultation.findUnique).not.toHaveBeenCalled();
+    expect(mockExecuteProvider).toHaveBeenCalledOnce();
+    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ action: 'cache_bypass' }) }),
+    );
   });
 
   it('calls provider and persists on cache miss', async () => {

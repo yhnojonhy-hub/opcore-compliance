@@ -156,10 +156,6 @@ function formatUpstreamBody(body: string): string {
   return trimmed.length > 160 ? `${trimmed.slice(0, 160)}…` : trimmed;
 }
 
-export function resolveDocumentTypeFilter(documentType: DocumentType): string {
-  return documentType;
-}
-
 export function cacheExpiresAt(): Date {
   const d = new Date();
   d.setDate(d.getDate() + env.cacheTtlDays);

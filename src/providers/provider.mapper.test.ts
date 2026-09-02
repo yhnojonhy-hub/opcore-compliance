@@ -33,9 +33,9 @@ describe('provider.mapper', () => {
     expect(mapped['sections.cadastral.openingDate']).toBe('2013-10-03');
     expect(mapped['sections.cadastral.cnae']).toBe(9430800);
     expect(mapped['sections.corporateStructure.qsa']).toHaveLength(1);
-    expect(
-      (mapped['sections.corporateStructure.qsa'] as { nome_socio: string }[])[0].nome_socio,
-    ).toBe('HAYDEE SVAB');
+    expect((mapped['sections.corporateStructure.qsa'] as { name: string }[])[0].name).toBe(
+      'HAYDEE SVAB',
+    );
   });
 
   it('maps Brasil API CPF response to cpfRegular', () => {
@@ -58,7 +58,7 @@ describe('provider.mapper', () => {
     expect(mapped['sections.financial.protests']).toHaveLength(1);
   });
 
-  it('maps Lemit CNPJ response to cadastral and fiscalHealth paths', () => {
+  it('maps Lemit CNPJ response to cadastral and financial paths', () => {
     const seed = loadProviderSeed('providers/lemit-cnpj.json');
     const raw = loadFixture('lemit-cnpj-response.json');
     const mapped = applyFieldMappings(raw, seed.fieldMappings);
@@ -66,7 +66,9 @@ describe('provider.mapper', () => {
     expect(mapped['sections.cadastral.legalName']).toBe('OPEN KNOWLEDGE BRASIL');
     expect(mapped['sections.cadastral.tradeName']).toBe('REDE PELO CONHECIMENTO LIVRE');
     expect(mapped['sections.cadastral.cnpjStatus']).toBe('ATIVA');
-    expect(mapped['sections.fiscalHealth.protests']).toHaveLength(1);
+    expect(mapped['sections.financial.protests']).toHaveLength(1);
+    const protest = (mapped['sections.financial.protests'] as { amount: number }[])[0];
+    expect(protest.amount).toBe(3200.5);
   });
 
   it('maps BigDataCorp CPF response to cadastral and pldft paths', () => {

@@ -23,23 +23,4 @@ export async function filterProvidersByTier(
   return providers.filter((p) => providerMatchesTier(p, maxTier));
 }
 
-export function isBigDataCorpProvider(slug: string): boolean {
-  return slug.startsWith('bigdatacorp-');
-}
-
-export function describeProviderTier(provider: Provider): {
-  slug: string;
-  tier: number;
-  category?: string;
-  dataset?: string;
-} {
-  const template = provider.requestTemplate as RequestTemplate;
-  return {
-    slug: provider.slug,
-    tier: getProviderActivationTier(provider),
-    category: template._bdcMeta?.category,
-    dataset: template._bdcMeta?.dataset,
-  };
-}
-
 export type { DocumentType };

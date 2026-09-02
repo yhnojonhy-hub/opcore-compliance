@@ -76,14 +76,14 @@ export function assembleDossier(params: {
 
   const completeness = computeCompleteness(sections, params.documentType);
 
-  const subject =
+  const subject: ComplianceDossier['subject'] =
     params.documentType === 'CPF'
       ? {
-          type: 'PF',
+          type: 'PF' as const,
           fullName: (sections as PfSections).cadastral.fullName ?? null,
         }
       : {
-          type: 'PJ',
+          type: 'PJ' as const,
           legalName: (sections as PjSections).cadastral.legalName ?? null,
           tradeName: (sections as PjSections).cadastral.tradeName ?? null,
         };

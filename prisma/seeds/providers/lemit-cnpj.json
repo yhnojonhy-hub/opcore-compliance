@@ -16,7 +16,7 @@
     { "source": "$.razao_social", "target": "sections.cadastral.legalName" },
     { "source": "$.nome_fantasia", "target": "sections.cadastral.tradeName" },
     { "source": "$.situacao_cadastral", "target": "sections.cadastral.cnpjStatus" },
-    { "source": "$.protestos", "target": "sections.fiscalHealth.protests" }
+    { "source": "$.protestos", "target": "sections.financial.protests" }
   ],
   "supportedTypes": ["CNPJ"],
   "isActive": true,

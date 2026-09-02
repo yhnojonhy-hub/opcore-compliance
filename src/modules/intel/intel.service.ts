@@ -4,6 +4,7 @@ import type {
   DossierPurpose,
   TargetType,
 } from '../../contracts/enums/intel.enums.js';
+import { pruneEmptyDeep } from '../../contracts/utils/prune.util.js';
 import type {
   CreateIntelDossierInput,
   IntelDossierResponse,
@@ -16,6 +17,7 @@ import { runIntelSearch } from './intel.orchestrator.js';
 import { consultAllForDocument } from '../compliance/compliance.orchestrator.js';
 import { findingsToSections, mergeIntelIntoComplianceDossier } from '../../dossier/intel-bridge.js';
 import { buildDossier } from '../compliance/dossier.service.js';
+import { serializeIntelDossierResponse } from './intel-response.util.js';
 import type { ComplianceDossier } from '../../contracts/types/compliance-dossier.types.js';
 import { emptyPjSections } from '../../contracts/types/compliance-dossier.types.js';
 import { ComplianceStatus } from '../../contracts/enums/compliance-status.enum.js';
@@ -59,22 +61,24 @@ function mapDossier(row: {
     error: string | null;
   }>;
 }): IntelDossierResponse {
-  const findings = row.findings.map((f) => ({
-    id: f.id,
-    category: f.category as IntelDossierResponse['findings'][0]['category'],
-    sourceName: f.sourceName,
-    reliability: f.reliability as IntelDossierResponse['findings'][0]['reliability'],
-    confidence: f.confidence,
-    title: f.title,
-    summary: f.summary,
-    details:
-      f.details && typeof f.details === 'object' && !Array.isArray(f.details)
-        ? (f.details as Record<string, unknown>)
-        : {},
-    url: f.url,
-    occurredAt: f.occurredAt?.toISOString() ?? null,
-    verified: f.verified,
-  }));
+  const findings = row.findings
+    .map((f) => ({
+      id: f.id,
+      category: f.category as IntelDossierResponse['findings'][0]['category'],
+      sourceName: f.sourceName,
+      reliability: f.reliability as IntelDossierResponse['findings'][0]['reliability'],
+      confidence: f.confidence,
+      title: f.title,
+      summary: f.summary,
+      details:
+        f.details && typeof f.details === 'object' && !Array.isArray(f.details)
+          ? (f.details as Record<string, unknown>)
+          : {},
+      url: f.url,
+      occurredAt: f.occurredAt?.toISOString() ?? null,
+      verified: f.verified,
+    }))
+    .filter((finding) => finding.title.trim() || finding.summary.trim());
   const sources = row.sources.map((s) => ({
     id: s.id,
     name: s.name,
@@ -97,7 +101,7 @@ function mapDossier(row: {
       })),
     );
   const purpose = row.purpose as DossierPurpose;
-  return {
+  return serializeIntelDossierResponse({
     id: row.id,
     target: row.target,
     targetType: row.targetType as TargetType,
@@ -115,7 +119,7 @@ function mapDossier(row: {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     completedAt: row.completedAt?.toISOString() ?? null,
-  };
+  });
 }
 
 async function loadDossier(id: string) {
@@ -174,6 +178,7 @@ export async function createIntelDossier(
       document: target.replace(/\D/g, ''),
       documentType: input.targetType,
       requestedBy: input.requestedBy,
+      forceRefresh: input.forceRefresh,
     });
   }
 
@@ -247,7 +252,7 @@ export async function getIntelCanonicalDossier(id: string): Promise<ComplianceDo
   if (!intel) return null;
 
   if (intel.targetType !== 'CPF' && intel.targetType !== 'CNPJ') {
-    const intelSections = findingsToSections(intel.findings);
+    const intelSections = findingsToSections(intel.findings, null);
     const baseSections = emptyPjSections();
     const merged = mergeIntelIntoComplianceDossier(
       {
@@ -259,7 +264,7 @@ export async function getIntelCanonicalDossier(id: string): Promise<ComplianceDo
           completeness: 0.4,
           hash: `intel-${intel.id}`,
         },
-        subject: { target: intel.target, targetType: intel.targetType },
+        subject: { type: 'PJ', legalName: intel.partyName ?? intel.target, tradeName: null },
         sections: baseSections,
         sources: intel.sources.map((s) => ({
           providerSlug: s.providerSlug ?? s.name,
@@ -284,7 +289,7 @@ export async function getIntelCanonicalDossier(id: string): Promise<ComplianceDo
       },
       intelSections,
     );
-    return merged;
+    return pruneEmptyDeep(merged, { preserveKeys: ['meta', 'subject', 'risk', 'compliance'] });
   }
 
   const document = intel.target.replace(/\D/g, '');
@@ -293,8 +298,13 @@ export async function getIntelCanonicalDossier(id: string): Promise<ComplianceDo
     documentType: intel.targetType,
     requestedBy: undefined,
   });
-  const intelSections = findingsToSections(intel.findings);
-  return mergeIntelIntoComplianceDossier(dossier as ComplianceDossier, intelSections);
+  const intelSections = findingsToSections(intel.findings, intel.targetType);
+  return pruneEmptyDeep(
+    mergeIntelIntoComplianceDossier(dossier as ComplianceDossier, intelSections),
+    {
+      preserveKeys: ['meta', 'subject', 'risk', 'compliance'],
+    },
+  );
 }
 
 export async function buildFullComplianceDossier(params: {

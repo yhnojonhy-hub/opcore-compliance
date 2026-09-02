@@ -52,13 +52,6 @@ export function isValidCnpj(cnpj: string): boolean {
   return d1 === nums[12] && d2 === nums[13];
 }
 
-export function detectDocumentType(document: string): DocumentType {
-  const d = normalizeDocument(document);
-  if (d.length === 11) return 'CPF';
-  if (d.length === 14) return 'CNPJ';
-  throw new Error('Documento inválido: deve ser CPF (11) ou CNPJ (14) dígitos');
-}
-
 export function validateDocument(document: string, documentType: DocumentType): string {
   const normalized = normalizeDocument(document);
   if (documentType === 'CPF' && !isValidCpf(normalized)) {

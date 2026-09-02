@@ -1,5 +1,12 @@
 import type { ComplianceStatus } from '../enums/compliance-status.enum.js';
 import type { RiskLevel } from '../enums/risk-level.enum.js';
+import type { PfSections, PfSubject } from './canonical/pf.types.js';
+import type { PjSections, PjSubject } from './canonical/pj.types.js';
+import { emptyPfSections } from './canonical/pf.types.js';
+import { emptyPjSections } from './canonical/pj.types.js';
+
+export type { PfSections, PfSubject, PjSections, PjSubject };
+export { emptyPfSections, emptyPjSections };
 
 export interface RiskFactor {
   code: string;
@@ -50,56 +57,12 @@ export interface DossierAudit {
   reportHash: string;
 }
 
-export interface PfSections {
-  cadastral: Record<string, unknown>;
-  pldft: Record<string, unknown>;
-  litigation: Record<string, unknown>;
-  financial: Record<string, unknown>;
-  esg: Record<string, unknown>;
-  corporateLinks: Record<string, unknown>;
-}
-
-export interface PjSections {
-  cadastral: Record<string, unknown>;
-  corporateStructure: Record<string, unknown>;
-  sanctions: Record<string, unknown>;
-  fiscalHealth: Record<string, unknown>;
-  litigationEsg: Record<string, unknown>;
-  certificates: Record<string, unknown>;
-  credit: Record<string, unknown>;
-  extensions: Record<string, unknown>;
-}
-
 export interface ComplianceDossier {
   meta: DossierMeta;
-  subject: Record<string, unknown>;
+  subject: PfSubject | PjSubject;
   risk: RiskAssessmentResult;
   compliance: ComplianceVerdict;
   sections: PfSections | PjSections;
   sources: DossierSource[];
   audit: DossierAudit;
-}
-
-export function emptyPfSections(): PfSections {
-  return {
-    cadastral: {},
-    pldft: {},
-    litigation: {},
-    financial: {},
-    esg: {},
-    corporateLinks: {},
-  };
-}
-
-export function emptyPjSections(): PjSections {
-  return {
-    cadastral: {},
-    corporateStructure: {},
-    sanctions: {},
-    fiscalHealth: {},
-    litigationEsg: {},
-    certificates: {},
-    credit: {},
-    extensions: {},
-  };
 }

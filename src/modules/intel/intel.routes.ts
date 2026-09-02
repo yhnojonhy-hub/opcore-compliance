@@ -1,6 +1,7 @@
 import type { Express } from 'express';
 import { z } from 'zod';
 import { TARGET_TYPES } from '../../contracts/enums/intel.enums.js';
+import { pruneEmptyDeep } from '../../contracts/utils/prune.util.js';
 import type { AuthedRequest } from '../../middleware/auth.js';
 import { requireJwt } from '../../middleware/auth.js';
 import {
@@ -22,6 +23,7 @@ const createBodySchema = z.object({
   partyName: z.string().optional(),
   tenantId: z.string().optional(),
   includeBureau: z.boolean().optional(),
+  forceRefresh: z.boolean().optional(),
 });
 
 export function registerIntelRoutes(app: Express) {
@@ -76,7 +78,9 @@ export function registerIntelRoutes(app: Express) {
         res.status(404).json({ error: 'Dossiê intel não encontrado' });
         return;
       }
-      res.json(canonical);
+      res.json(
+        pruneEmptyDeep(canonical, { preserveKeys: ['meta', 'subject', 'risk', 'compliance'] }),
+      );
     } catch (e) {
       res.status(422).json({ error: (e as Error).message });
     }
@@ -104,7 +108,11 @@ export function registerFullDossierRoute(app: Express) {
         deepSearch,
         requestedBy: (req as AuthedRequest).auth?.sub,
       });
-      res.json(result);
+      res.json(
+        pruneEmptyDeep(result, {
+          preserveKeys: ['meta', 'subject', 'risk', 'compliance', 'intel'],
+        }),
+      );
     } catch (e) {
       res.status(422).json({ error: (e as Error).message });
     }

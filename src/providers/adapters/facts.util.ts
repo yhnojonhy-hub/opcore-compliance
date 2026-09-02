@@ -247,7 +247,7 @@ function formatProbePayload(rows: Record<string, unknown>[], sourceName: string)
   ];
 }
 
-export function formatSourcePayload(payload: unknown, sourceName = ''): FindingFact[] {
+function formatSourcePayload(payload: unknown, sourceName = ''): FindingFact[] {
   if (payload == null) return [];
   const name = sourceName.toLowerCase();
   const rows = recordsOf(payload);

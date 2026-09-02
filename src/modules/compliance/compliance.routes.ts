@@ -2,6 +2,7 @@ import type { Express } from 'express';
 import { z } from 'zod';
 import type { ComplianceConsultation, DocumentType, Prisma, Provider } from '@prisma/client';
 import { validateDocument } from '../../contracts/utils/document.util.js';
+import { pruneEmptyDeep } from '../../contracts/utils/prune.util.js';
 import type { AuthedRequest } from '../../middleware/auth.js';
 import { requireJwt } from '../../middleware/auth.js';
 import { prisma } from '../../db/prisma.js';
@@ -14,10 +15,20 @@ function complianceErrorStatus(e: unknown): number {
   return 422;
 }
 
+function includeRawFromQuery(value: unknown): boolean {
+  return value === 'true' || value === '1';
+}
+
+function forceRefreshFromQuery(value: unknown): boolean {
+  return value === 'true' || value === '1';
+}
+
 const consultBodySchema = z.object({
   document: z.string().min(1),
   documentType: z.enum(['CPF', 'CNPJ']),
   providerSlug: z.string().optional(),
+  includeRaw: z.boolean().optional(),
+  forceRefresh: z.boolean().optional(),
 });
 
 export function registerComplianceRoutes(app: Express) {
@@ -29,6 +40,8 @@ export function registerComplianceRoutes(app: Express) {
         documentType: 'CPF',
         providerSlug: req.query.providerSlug as string | undefined,
         requestedBy: (req as AuthedRequest).auth?.sub,
+        includeRaw: includeRawFromQuery(req.query.includeRaw),
+        forceRefresh: forceRefreshFromQuery(req.query.forceRefresh),
       });
       res.json(result);
     } catch (e) {
@@ -44,6 +57,8 @@ export function registerComplianceRoutes(app: Express) {
         documentType: 'CNPJ',
         providerSlug: req.query.providerSlug as string | undefined,
         requestedBy: (req as AuthedRequest).auth?.sub,
+        includeRaw: includeRawFromQuery(req.query.includeRaw),
+        forceRefresh: forceRefreshFromQuery(req.query.forceRefresh),
       });
       res.json(result);
     } catch (e) {
@@ -64,6 +79,8 @@ export function registerComplianceRoutes(app: Express) {
         documentType: parsed.data.documentType,
         providerSlug: parsed.data.providerSlug,
         requestedBy: (req as AuthedRequest).auth?.sub,
+        includeRaw: parsed.data.includeRaw,
+        forceRefresh: parsed.data.forceRefresh,
       });
       res.json(result);
     } catch (e) {
@@ -96,8 +113,11 @@ export function registerComplianceRoutes(app: Express) {
         providerSlug: req.query.providerSlug as string | undefined,
         requestedBy: (req as AuthedRequest).auth?.sub,
         maxTier,
+        forceRefresh: forceRefreshFromQuery(req.query.forceRefresh),
       });
-      res.json(dossier);
+      res.json(
+        pruneEmptyDeep(dossier, { preserveKeys: ['meta', 'subject', 'risk', 'compliance'] }),
+      );
     } catch (e) {
       res.status(complianceErrorStatus(e)).json({ error: (e as Error).message });
     }
@@ -114,6 +134,7 @@ export function registerComplianceRoutes(app: Express) {
         providerSlug: req.query.providerSlug as string | undefined,
         requestedBy: (req as AuthedRequest).auth?.sub,
         maxTier,
+        forceRefresh: forceRefreshFromQuery(req.query.forceRefresh),
       });
       res.json(assessment);
     } catch (e) {

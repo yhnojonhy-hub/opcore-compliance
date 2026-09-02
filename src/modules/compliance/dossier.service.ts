@@ -1,6 +1,7 @@
 import type { ComplianceStatus, DocumentType, Prisma, RiskLevel } from '@prisma/client';
 import { ComplianceStatus as ContractComplianceStatus } from '../../contracts/enums/compliance-status.enum.js';
 import { RiskLevel as ContractRiskLevel } from '../../contracts/enums/risk-level.enum.js';
+import { pruneEmptyDeep } from '../../contracts/utils/prune.util.js';
 import { prisma } from '../../db/prisma.js';
 import { assembleDossier } from '../../dossier/dossier.assembler.js';
 import { evaluateRisk } from '../../risk/risk.engine.js';
@@ -24,10 +25,11 @@ export async function buildDossier(params: {
     providerSlug: params.providerSlug,
     requestedBy: params.requestedBy,
     maxTier,
+    forceRefresh: params.forceRefresh,
   });
 
   const consultations = await getCachedConsultations(params.document, params.documentType);
-  const consultationInputs = consultations.map((c) => toConsultationInput(c, true));
+  const consultationInputs = consultations.map((c) => toConsultationInput(c, !params.forceRefresh));
 
   const latestVersion = await prisma.complianceDossier.findFirst({
     where: { document: params.document, documentType: params.documentType },
@@ -97,13 +99,8 @@ export async function buildDossier(params: {
     metadata: { version, riskLevel: risk.level, maxTier, providerCount: consultationInputs.length },
   });
 
-  return { dossier, assessment: saved.riskAssessment };
-}
-
-export async function getLatestDossier(document: string, documentType: DocumentType) {
-  return prisma.complianceDossier.findFirst({
-    where: { document, documentType },
-    orderBy: { version: 'desc' },
-    include: { riskAssessment: true },
-  });
+  return {
+    dossier: pruneEmptyDeep(dossier, { preserveKeys: ['meta', 'subject', 'risk', 'compliance'] }),
+    assessment: saved.riskAssessment,
+  };
 }

@@ -54,8 +54,7 @@ describe('compliance.routes', () => {
       documentType: 'CPF',
       provider: 'mock-provider',
       source: 'provider',
-      payload: {},
-      rawPayload: {},
+      payload: { sections: { cadastral: { fullName: 'Maria' } } },
       cachedAt: new Date().toISOString(),
       providerId: 'provider-1',
       cacheHit: false,
@@ -68,5 +67,50 @@ describe('compliance.routes', () => {
     expect(res.status).toBe(200);
     expect(res.body.document).toBe('52998224725');
     expect(res.body.cacheHit).toBe(false);
+    expect(res.body.rawPayload).toBeUndefined();
+  });
+
+  it('returns consult result with optional raw payload', async () => {
+    mockConsultDocument.mockResolvedValue({
+      document: '52998224725',
+      documentType: 'CPF',
+      provider: 'mock-provider',
+      source: 'provider',
+      payload: { sections: { cadastral: { fullName: 'Maria' } } },
+      rawPayload: { data: { fullName: 'Maria' } },
+      cachedAt: new Date().toISOString(),
+      providerId: 'provider-1',
+      cacheHit: false,
+    });
+
+    const res = await request(app)
+      .get('/v1/compliance/cpf/52998224725?includeRaw=true')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.payload.sections.cadastral.fullName).toBe('Maria');
+    expect(res.body.rawPayload).toEqual({ data: { fullName: 'Maria' } });
+  });
+
+  it('passes forceRefresh to consultDocument', async () => {
+    mockConsultDocument.mockResolvedValue({
+      document: '52998224725',
+      documentType: 'CPF',
+      provider: 'mock-provider',
+      source: 'provider',
+      payload: { sections: { cadastral: { fullName: 'João' } } },
+      cachedAt: new Date().toISOString(),
+      providerId: 'provider-1',
+      cacheHit: false,
+    });
+
+    const res = await request(app)
+      .get('/v1/compliance/cpf/52998224725?forceRefresh=true')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(mockConsultDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ forceRefresh: true }),
+    );
   });
 });

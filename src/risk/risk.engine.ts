@@ -108,7 +108,7 @@ function evaluateLeafCondition(dossier: ComplianceDossier, condition: RuleCondit
   }
 }
 
-export function evaluateCondition(dossier: ComplianceDossier, condition: RuleCondition): boolean {
+function evaluateCondition(dossier: ComplianceDossier, condition: RuleCondition): boolean {
   if (condition.or?.length) {
     return condition.or.some((child) => evaluateCondition(dossier, child));
   }

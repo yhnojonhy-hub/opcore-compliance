@@ -35,15 +35,10 @@ export function getEnv(): IntelEnv {
     INTERPOL_API_BASE:
       process.env.INTERPOL_API_BASE?.trim() || 'https://ws-public.interpol.int/notices/v1',
     PAID_PROVIDERS_ENABLED: process.env.PAID_PROVIDERS_ENABLED?.trim() ?? '',
-    INTEL_SYNC_TIMEOUT_MS: Number(process.env.INTEL_SYNC_TIMEOUT_MS ?? 14_000),
-    INTEL_ASYNC_TIMEOUT_MS: Number(process.env.INTEL_ASYNC_TIMEOUT_MS ?? 40_000),
+    INTEL_SYNC_TIMEOUT_MS: env.intelSyncTimeoutMs,
+    INTEL_ASYNC_TIMEOUT_MS: env.intelAsyncTimeoutMs,
   };
   return cached;
 }
 
-export function resetIntelEnvCache(): void {
-  cached = null;
-}
-
-/** Re-export base env for bureau bridge */
 export { env };

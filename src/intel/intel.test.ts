@@ -89,19 +89,22 @@ describe('isValidTarget', () => {
 
 describe('intel-bridge', () => {
   it('maps sanction findings to sections', () => {
-    const sections = findingsToSections([
-      {
-        id: '1',
-        category: 'SANCTION',
-        sourceName: 'Portal',
-        reliability: 'OFFICIAL',
-        confidence: 90,
-        title: 'CEIS',
-        summary: 'Consta',
-        details: {},
-        verified: false,
-      },
-    ]);
-    expect(sections.sanctions?.sanctionFindings).toBeDefined();
+    const sections = findingsToSections(
+      [
+        {
+          id: '1',
+          category: 'SANCTION',
+          sourceName: 'Portal',
+          reliability: 'OFFICIAL',
+          confidence: 90,
+          title: 'CEIS',
+          summary: 'Consta',
+          details: {},
+          verified: false,
+        },
+      ],
+      'CNPJ',
+    );
+    expect(sections.sanctions?.internationalHits).toHaveLength(1);
   });
 });

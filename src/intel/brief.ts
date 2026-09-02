@@ -1,8 +1,10 @@
-import type { DossierLegalBasis } from '../contracts/enums/intel.enums.js';
+import {
+  DOSSIER_PURPOSES,
+  type DossierLegalBasis,
+  type DossierPurpose,
+} from '../contracts/enums/intel.enums.js';
 
-export const DOSSIER_PURPOSES = ['KYC', 'PRE_CONTRACT', 'MA', 'LITIGATION', 'CREDIT'] as const;
-export type DossierPurpose = (typeof DOSSIER_PURPOSES)[number];
-export type RiskLevel = 'GREEN' | 'YELLOW' | 'RED';
+export type BriefRiskBand = 'GREEN' | 'YELLOW' | 'RED';
 
 export const PURPOSE_LABEL: Record<DossierPurpose, string> = {
   KYC: 'KYC / due diligence',
@@ -66,13 +68,13 @@ const ADVERSE_RE =
 export interface CategoryRisk {
   category: string;
   label: string;
-  level: RiskLevel;
+  level: BriefRiskBand;
   count: number;
   hits: number;
 }
 
 export interface DossierRiskBrief {
-  overall: RiskLevel;
+  overall: BriefRiskBand;
   categories: CategoryRisk[];
 }
 
@@ -94,7 +96,7 @@ export interface DossierIntelBrief {
   gaps: DossierGap[];
 }
 
-const ESTIMATIVE: Record<RiskLevel, string> = {
+const ESTIMATIVE: Record<BriefRiskBand, string> = {
   GREEN: 'improvável',
   YELLOW: 'chance aproximada',
   RED: 'provável',
@@ -162,7 +164,7 @@ export function isAdverseFinding(text: string): boolean {
   return ADVERSE_RE.test(lower);
 }
 
-function worse(a: RiskLevel, b: RiskLevel): RiskLevel {
+function worse(a: BriefRiskBand, b: BriefRiskBand): BriefRiskBand {
   const rank = { GREEN: 0, YELLOW: 1, RED: 2 };
   return rank[a] >= rank[b] ? a : b;
 }
@@ -170,7 +172,7 @@ function worse(a: RiskLevel, b: RiskLevel): RiskLevel {
 function assessCategory(
   category: string,
   items: Array<{ title: string; summary: string }>,
-): RiskLevel {
+): BriefRiskBand {
   if (items.length === 0) return 'GREEN';
   const texts = items.map((item) => `${item.title} ${item.summary}`);
   const hits = texts.filter((text) => !isNegativeFinding(text));
@@ -209,7 +211,7 @@ export function assessDossierRisk(
       hits,
     };
   });
-  const overall = categories.reduce<RiskLevel>(
+  const overall = categories.reduce<BriefRiskBand>(
     (current, item) => worse(current, item.level),
     'GREEN',
   );

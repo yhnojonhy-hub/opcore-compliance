@@ -1,4 +1,6 @@
-import type { DocumentType, Prisma, Provider } from '@prisma/client';
+import type { DocumentType, Prisma } from '@prisma/client';
+import { flatMappedToSections } from '../../contracts/utils/mapped-payload.util.js';
+import { pruneEmptyDeep } from '../../contracts/utils/prune.util.js';
 import { prisma } from '../../db/prisma.js';
 import { applyFieldMappings, resolveMappedPayload } from '../../providers/provider.mapper.js';
 import { cacheExpiresAt, executeProvider } from '../../providers/provider.executor.js';
@@ -10,11 +12,36 @@ export interface ConsultResult {
   documentType: DocumentType;
   provider: string;
   source: 'cache' | 'provider';
-  payload: Record<string, unknown>;
-  rawPayload: unknown;
+  payload: { sections: Record<string, Record<string, unknown>> };
+  rawPayload?: unknown;
   cachedAt: string;
   providerId: string;
   cacheHit: boolean;
+}
+
+export function formatConsultResult(
+  result: Omit<ConsultResult, 'payload' | 'rawPayload'> & {
+    mapped: Record<string, unknown>;
+    rawPayload: unknown;
+  },
+  options?: { includeRaw?: boolean },
+): ConsultResult {
+  const sections = flatMappedToSections(result.mapped);
+  const payload = pruneEmptyDeep({ sections }) as ConsultResult['payload'];
+  const formatted: ConsultResult = {
+    document: result.document,
+    documentType: result.documentType,
+    provider: result.provider,
+    source: result.source,
+    payload,
+    cachedAt: result.cachedAt,
+    providerId: result.providerId,
+    cacheHit: result.cacheHit,
+  };
+  if (options?.includeRaw) {
+    formatted.rawPayload = result.rawPayload;
+  }
+  return formatted;
 }
 
 export async function logAudit(params: {
@@ -43,18 +70,22 @@ export async function consultDocument(params: {
   documentType: DocumentType;
   providerSlug?: string;
   requestedBy?: string;
+  includeRaw?: boolean;
+  forceRefresh?: boolean;
 }): Promise<ConsultResult> {
   const provider = await resolveProvider(params.documentType, params.providerSlug);
 
-  const existing = await prisma.complianceConsultation.findUnique({
-    where: {
-      document_documentType_providerId: {
-        document: params.document,
-        documentType: params.documentType,
-        providerId: provider.id,
-      },
-    },
-  });
+  const existing = params.forceRefresh
+    ? null
+    : await prisma.complianceConsultation.findUnique({
+        where: {
+          document_documentType_providerId: {
+            document: params.document,
+            documentType: params.documentType,
+            providerId: provider.id,
+          },
+        },
+      });
 
   if (existing && isCacheValid(existing.expiresAt)) {
     const fieldMappings = provider.fieldMappings as unknown as FieldMapping[];
@@ -84,17 +115,20 @@ export async function consultDocument(params: {
       providerId: provider.id,
     });
 
-    return {
-      document: params.document,
-      documentType: params.documentType,
-      provider: provider.slug,
-      source: 'cache',
-      payload,
-      rawPayload: existing.rawPayload,
-      cachedAt: existing.updatedAt.toISOString(),
-      providerId: provider.id,
-      cacheHit: true,
-    };
+    return formatConsultResult(
+      {
+        document: params.document,
+        documentType: params.documentType,
+        provider: provider.slug,
+        source: 'cache',
+        mapped: payload,
+        rawPayload: existing.rawPayload,
+        cachedAt: existing.updatedAt.toISOString(),
+        providerId: provider.id,
+        cacheHit: true,
+      },
+      { includeRaw: params.includeRaw },
+    );
   }
 
   const rawPayload = await executeProvider(provider, {
@@ -132,23 +166,26 @@ export async function consultDocument(params: {
   });
 
   await logAudit({
-    action: 'cache_miss',
+    action: params.forceRefresh ? 'cache_bypass' : 'cache_miss',
     document: params.document,
     providerId: provider.id,
     metadata: { mappedFields: Object.keys(payload).length },
   });
 
-  return {
-    document: params.document,
-    documentType: params.documentType,
-    provider: provider.slug,
-    source: 'provider',
-    payload,
-    rawPayload,
-    cachedAt: new Date().toISOString(),
-    providerId: provider.id,
-    cacheHit: false,
-  };
+  return formatConsultResult(
+    {
+      document: params.document,
+      documentType: params.documentType,
+      provider: provider.slug,
+      source: 'provider',
+      mapped: payload,
+      rawPayload,
+      cachedAt: new Date().toISOString(),
+      providerId: provider.id,
+      cacheHit: false,
+    },
+    { includeRaw: params.includeRaw },
+  );
 }
 
 export async function getCachedConsultations(document: string, documentType?: DocumentType) {
@@ -182,8 +219,4 @@ export function toConsultationInput(
     rawPayload: row.rawPayload,
     fieldMappings,
   };
-}
-
-export async function getProviderRecord(provider: Provider) {
-  return provider;
 }

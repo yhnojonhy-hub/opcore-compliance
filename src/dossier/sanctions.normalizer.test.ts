@@ -48,6 +48,25 @@ describe('sanctions.normalizer', () => {
     expect(possible).toHaveLength(1);
   });
 
+  it('flattens BDC owners_kyc container into sanction hits', () => {
+    const mapped: Record<string, unknown> = {
+      'sections.sanctions.internationalHits': {
+        TotalCurrentlySanctioned: 1,
+        PeopleOwnersKycData: {
+          '27325587880': {
+            SanctionsHistory: [
+              { ...OFAC_SAMPLE, MatchRate: 91, Details: { ...OFAC_SAMPLE.Details } },
+            ],
+          },
+        },
+      },
+    };
+    normalizeSanctionsInMapped(mapped);
+    expect(Array.isArray(mapped['sections.sanctions.internationalHits'])).toBe(true);
+    expect(mapped['sections.sanctions.internationalHits']).toHaveLength(1);
+    expect(mapped['sections.sanctions.isCurrentlySanctioned']).toBe(true);
+  });
+
   it('does not flag isSanctioned when only weak/possible hits exist', () => {
     const mapped: Record<string, unknown> = {
       'sections.pldft.isSanctioned': true,

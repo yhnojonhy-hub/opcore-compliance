@@ -1,7 +1,5 @@
 export const TARGET_TYPES = ['CPF', 'CNPJ', 'PHONE', 'EMAIL', 'NAME', 'PASSAPORTE'] as const;
 export type TargetType = (typeof TARGET_TYPES)[number];
-/** @deprecated Use TargetType — alias for juridico port compatibility */
-export type DossierTargetType = TargetType;
 
 export const FINDING_CATEGORIES = [
   'IDENTITY',
