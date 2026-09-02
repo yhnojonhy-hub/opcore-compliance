@@ -17,6 +17,14 @@ export interface RequestTemplate {
   headers?: Record<string, string>;
   fixtureKey?: string;
   _bdcMeta?: BdcProviderMeta;
+  _providerMeta?: {
+    adapterRef?: string;
+    outputMode?: 'sections' | 'findings' | 'both';
+    phase?: 'sync' | 'async';
+    reliability?: string;
+    findingCategory?: string;
+    timeoutMs?: number;
+  };
 }
 
 export interface ProviderConfig {

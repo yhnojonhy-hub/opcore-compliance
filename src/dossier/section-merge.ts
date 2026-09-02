@@ -1,4 +1,5 @@
 export interface MergeContext {
+  /** Lower number = higher precedence (BigDataCorp=10 beats Lemit=20). */
   priority: number;
   consultedAt: Date;
   providerSlug: string;
@@ -11,11 +12,19 @@ function isEmpty(value: unknown): boolean {
   return false;
 }
 
+export function isBigDataCorpSlug(slug: string | undefined | null): boolean {
+  return Boolean(slug?.toLowerCase().startsWith('bigdatacorp'));
+}
+
 function itemKey(item: unknown): string {
   if (item === null || item === undefined) return String(item);
   if (typeof item !== 'object') return JSON.stringify(item);
   const obj = item as Record<string, unknown>;
   if (obj.document != null) return `doc:${String(obj.document)}`;
+  const caseNumber = obj.caseNumber ?? obj.numeroProcesso ?? obj.processNumber ?? obj.numero;
+  if (caseNumber != null && String(caseNumber).trim()) {
+    return `case:${String(caseNumber).replace(/\D/g, '') || String(caseNumber)}`;
+  }
   if (obj.name != null && obj.role != null) {
     return `name-role:${String(obj.name)}|${String(obj.role)}`;
   }
@@ -39,6 +48,10 @@ function dedupeArray(items: unknown[]): unknown[] {
   return result;
 }
 
+/**
+ * Fill-gap merge: never overwrite a filled field from BigDataCorp.
+ * Among non-BDC sources, lower priority number wins (contract: menor = primeiro).
+ */
 function shouldReplaceScalar(
   existing: unknown,
   incoming: unknown,
@@ -49,8 +62,13 @@ function shouldReplaceScalar(
   if (isEmpty(incoming)) return false;
   if (!existingCtx) return true;
 
+  if (isBigDataCorpSlug(existingCtx.providerSlug)) return false;
+  if (isBigDataCorpSlug(incomingCtx.providerSlug) && !isBigDataCorpSlug(existingCtx.providerSlug)) {
+    return true;
+  }
+
   if (incomingCtx.priority !== existingCtx.priority) {
-    return incomingCtx.priority > existingCtx.priority;
+    return incomingCtx.priority < existingCtx.priority;
   }
   return incomingCtx.consultedAt.getTime() >= existingCtx.consultedAt.getTime();
 }
@@ -164,7 +182,7 @@ function mergeObject(
 
 /**
  * Merges flat mapped keys (e.g. sections.cadastral.legalName) into section blocks
- * using fill-gap, array concat, and priority/recency for scalar conflicts.
+ * using fill-gap, array concat, and lower-priority-wins (BDC never overwritten).
  */
 export function mergeMappedIntoSectionsIncremental(
   mapped: Record<string, unknown>,

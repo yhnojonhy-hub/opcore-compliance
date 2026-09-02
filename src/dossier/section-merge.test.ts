@@ -44,21 +44,58 @@ describe('mergeMappedIntoSectionsIncremental', () => {
     expect(sections.cadastral.legalName).toBe('NEW NAME');
   });
 
-  it('prefers higher provider priority on scalar conflict', () => {
+  it('prefers lower provider priority number on scalar conflict', () => {
     const sections = emptyPjSections() as unknown as Record<string, Record<string, unknown>>;
 
     mergeMappedIntoSectionsIncremental(
-      { 'sections.cadastral.legalName': 'LOW PRIORITY' },
+      { 'sections.cadastral.legalName': 'LEMIT NAME' },
       sections,
-      ctx(5, '2026-01-01T00:00:00Z', 'low'),
+      ctx(20, '2026-01-01T00:00:00Z', 'lemit-cnpj'),
     );
     mergeMappedIntoSectionsIncremental(
-      { 'sections.cadastral.legalName': 'HIGH PRIORITY' },
+      { 'sections.cadastral.legalName': 'BDC NAME' },
       sections,
-      ctx(20, '2026-01-01T00:00:00Z', 'high'),
+      ctx(10, '2026-01-01T00:00:00Z', 'bigdatacorp-cnpj'),
     );
 
-    expect(sections.cadastral.legalName).toBe('HIGH PRIORITY');
+    expect(sections.cadastral.legalName).toBe('BDC NAME');
+  });
+
+  it('never lets Lemit overwrite BigDataCorp fullName', () => {
+    const sections = emptyPjSections() as unknown as Record<string, Record<string, unknown>>;
+
+    mergeMappedIntoSectionsIncremental(
+      { 'sections.cadastral.legalName': 'BDC NAME' },
+      sections,
+      ctx(10, '2026-01-01T00:00:00Z', 'bigdatacorp-cnpj'),
+    );
+    mergeMappedIntoSectionsIncremental(
+      { 'sections.cadastral.legalName': 'LEMIT NAME' },
+      sections,
+      ctx(20, '2026-01-02T00:00:00Z', 'lemit-cnpj'),
+    );
+
+    expect(sections.cadastral.legalName).toBe('BDC NAME');
+  });
+
+  it('lets Lemit fill protests when BDC has no value', () => {
+    const sections = emptyPjSections() as unknown as Record<string, Record<string, unknown>>;
+
+    mergeMappedIntoSectionsIncremental(
+      { 'sections.cadastral.legalName': 'BDC NAME' },
+      sections,
+      ctx(10, '2026-01-01T00:00:00Z', 'bigdatacorp-cnpj'),
+    );
+    mergeMappedIntoSectionsIncremental(
+      {
+        'sections.fiscalHealth.protests': [{ amount: 100, status: 'ativo' }],
+      },
+      sections,
+      ctx(20, '2026-01-02T00:00:00Z', 'lemit-cnpj'),
+    );
+
+    expect(sections.cadastral.legalName).toBe('BDC NAME');
+    expect(sections.fiscalHealth.protests).toHaveLength(1);
   });
 
   it('concatenates and deduplicates arrays', () => {
@@ -88,6 +125,33 @@ describe('mergeMappedIntoSectionsIncremental', () => {
     const hits = sections.sanctions.internationalHits as { document: string }[];
     expect(hits).toHaveLength(3);
     expect(hits.map((h) => h.document)).toEqual(['111', '222', '333']);
+  });
+
+  it('deduplicates lawsuits by case number', () => {
+    const sections = emptyPjSections() as unknown as Record<string, Record<string, unknown>>;
+
+    mergeMappedIntoSectionsIncremental(
+      {
+        'sections.litigationEsg.lawsuits': [
+          { caseNumber: '0001234-56.2024.8.26.0100', court: 'TJSP' },
+        ],
+      },
+      sections,
+      ctx(10, '2026-01-01T00:00:00Z', 'bigdatacorp-cpf'),
+    );
+    mergeMappedIntoSectionsIncremental(
+      {
+        'sections.litigationEsg.lawsuits': [
+          { caseNumber: '00012345620248260100', court: 'DataJud' },
+          { caseNumber: '9999999-00.2023.8.26.0100', court: 'TJSP' },
+        ],
+      },
+      sections,
+      ctx(50, '2026-01-02T00:00:00Z', 'osint-datajud'),
+    );
+
+    const lawsuits = sections.litigationEsg.lawsuits as { caseNumber: string }[];
+    expect(lawsuits).toHaveLength(2);
   });
 
   it('merges qsa arrays without duplicates', () => {

@@ -16,7 +16,7 @@
       "TokenId": "env:BIGDATACORP_TOKEN_ID"
     },
     "body": {
-      "Datasets": "basic_data,kyc",
+      "Datasets": "basic_data,kyc,processes",
       "q": "doc{{{document}}}",
       "Limit": 1
     }
@@ -32,7 +32,9 @@
       "source": "$.Result[0].KycData.IsCurrentlySanctioned",
       "target": "sections.pldft.isSanctioned"
     },
-    { "source": "$.Result[0].KycData.SanctionsHistory", "target": "sections.pldft.sanctionsHits" }
+    { "source": "$.Result[0].KycData.SanctionsHistory", "target": "sections.pldft.sanctionsHits" },
+    { "source": "$.Result[0].Lawsuits", "target": "sections.litigation.lawsuits" },
+    { "source": "$.Result[0].Processes", "target": "sections.litigation.lawsuits" }
   ],
   "supportedTypes": ["CPF"],
   "isActive": true,

@@ -77,9 +77,13 @@ function stripAccents(value: string): string {
 }
 
 function searchNames(ctx: ProviderContext): string[] {
-  const values = [ctx.partyName, ctx.target, ...(ctx.aliases ?? [])]
+  const values = [
+    ctx.partyName,
+    ctx.targetType === 'NAME' ? ctx.target : '',
+    ...(ctx.aliases ?? []),
+  ]
     .map((item) => item?.trim() ?? '')
-    .filter((item) => item.length > 3);
+    .filter((item) => item.length > 3 && /[A-Za-zÀ-ÿ]/.test(item));
   const unique = new Set<string>();
   for (const value of values) {
     unique.add(value);
@@ -88,6 +92,8 @@ function searchNames(ctx: ProviderContext): string[] {
   }
   return [...unique].slice(0, 8);
 }
+
+export { searchNames as searchNamesForTest };
 
 function cnpjOf(ctx: ProviderContext): string | null {
   if (ctx.targetType !== 'CNPJ') return null;

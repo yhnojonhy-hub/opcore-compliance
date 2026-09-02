@@ -15,7 +15,13 @@ import { classifyScore, scoreDossier } from '../../intel/scoring.js';
 import { isValidTarget } from '../../providers/adapters/registry.js';
 import { runIntelSearch } from './intel.orchestrator.js';
 import { consultAllForDocument } from '../compliance/compliance.orchestrator.js';
+import type { ConsultResult } from '../compliance/compliance.service.js';
+import {
+  bureauConsultationsToFindings,
+  extractPartyNameFromConsultations,
+} from '../../dossier/bureau-findings.js';
 import { findingsToSections, mergeIntelIntoComplianceDossier } from '../../dossier/intel-bridge.js';
+import { isBigDataCorpSlug } from '../../dossier/section-merge.js';
 import { buildDossier } from '../compliance/dossier.service.js';
 import { serializeIntelDossierResponse } from './intel-response.util.js';
 import type { ComplianceDossier } from '../../contracts/types/compliance-dossier.types.js';
@@ -129,6 +135,92 @@ async function loadDossier(id: string) {
   });
 }
 
+async function persistBureauBootstrap(params: {
+  dossierId: string;
+  documentType: 'CPF' | 'CNPJ';
+  results: ConsultResult[];
+}): Promise<string | undefined> {
+  const partyName = extractPartyNameFromConsultations(params.results, params.documentType);
+  if (partyName) {
+    await prisma.intelDossier.update({
+      where: { id: params.dossierId },
+      data: { partyName },
+    });
+  }
+
+  const drafts = bureauConsultationsToFindings(params.results, params.documentType);
+  const byProvider = new Map<string, ConsultResult>();
+  for (const result of params.results) {
+    if (!byProvider.has(result.provider)) byProvider.set(result.provider, result);
+  }
+
+  for (const result of byProvider.values()) {
+    const isBdc = isBigDataCorpSlug(result.provider);
+    await prisma.intelDossierSource.create({
+      data: {
+        dossierId: params.dossierId,
+        name: isBdc ? 'BigDataCorp' : result.provider,
+        providerSlug: result.provider,
+        category: 'IDENTITY',
+        reliability: isBdc ? 'PAID' : 'THIRD_PARTY',
+        status: 'ok',
+        durationMs: null,
+        error: null,
+      },
+    });
+  }
+
+  if (drafts.length > 0) {
+    await prisma.intelDossierFinding.createMany({
+      data: drafts.map((finding) => ({
+        dossierId: params.dossierId,
+        category: finding.category,
+        sourceName: finding.sourceName,
+        reliability: finding.reliability,
+        confidence: finding.confidence,
+        title: finding.title,
+        summary: finding.summary,
+        details: finding.details,
+        url: finding.url,
+        occurredAt: finding.occurredAt,
+        verified: finding.verified,
+      })),
+    });
+  }
+
+  return partyName;
+}
+
+async function bootstrapBureauBeforeOsint(params: {
+  dossierId: string;
+  target: string;
+  targetType: TargetType;
+  requestedBy?: string;
+  forceRefresh?: boolean;
+  existingPartyName?: string | null;
+}): Promise<string | undefined> {
+  if (params.targetType !== 'CPF' && params.targetType !== 'CNPJ') {
+    return params.existingPartyName ?? undefined;
+  }
+
+  const results = await consultAllForDocument({
+    document: params.target.replace(/\D/g, ''),
+    documentType: params.targetType,
+    requestedBy: params.requestedBy,
+    forceRefresh: params.forceRefresh,
+    softFail: true,
+  });
+
+  if (results.length === 0) return params.existingPartyName ?? undefined;
+
+  const resolved = await persistBureauBootstrap({
+    dossierId: params.dossierId,
+    documentType: params.targetType,
+    results,
+  });
+  return resolved ?? params.existingPartyName ?? undefined;
+}
+
 export async function createIntelDossier(
   input: CreateIntelDossierInput,
 ): Promise<IntelDossierResponse> {
@@ -163,24 +255,27 @@ export async function createIntelDossier(
     },
   });
 
-  await runIntelSearch({
-    dossierId: dossier.id,
-    deepSearch: input.deepSearch ?? false,
-    paidProviders: input.paidProviders,
-    partyNameHint: input.partyName,
-  });
-
+  let partyNameHint = input.partyName;
   if (
     input.includeBureau !== false &&
     (input.targetType === 'CPF' || input.targetType === 'CNPJ')
   ) {
-    await consultAllForDocument({
-      document: target.replace(/\D/g, ''),
-      documentType: input.targetType,
+    partyNameHint = await bootstrapBureauBeforeOsint({
+      dossierId: dossier.id,
+      target,
+      targetType: input.targetType,
       requestedBy: input.requestedBy,
       forceRefresh: input.forceRefresh,
+      existingPartyName: input.partyName,
     });
   }
+
+  await runIntelSearch({
+    dossierId: dossier.id,
+    deepSearch: input.deepSearch ?? false,
+    paidProviders: input.paidProviders,
+    partyNameHint,
+  });
 
   const full = await loadDossier(dossier.id);
   if (!full) throw new Error('Dossiê intel não encontrado após criação');
@@ -236,10 +331,18 @@ export async function regenerateIntelDossier(
     data: { dossierId: id, action: 'regenerated', actor: requestedBy },
   });
 
+  const partyNameHint = await bootstrapBureauBeforeOsint({
+    dossierId: id,
+    target: existing.target,
+    targetType: existing.targetType as TargetType,
+    requestedBy,
+    existingPartyName: existing.partyName,
+  });
+
   await runIntelSearch({
     dossierId: id,
     deepSearch: existing.deepSearch,
-    partyNameHint: existing.partyName ?? undefined,
+    partyNameHint,
   });
 
   const full = await loadDossier(id);

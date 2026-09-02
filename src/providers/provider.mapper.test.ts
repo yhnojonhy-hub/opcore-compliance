@@ -90,6 +90,7 @@ describe('provider.mapper', () => {
     expect(hit[0].matchConfidence).toBe('weak');
     expect(mapped['sections.pldft.sanctionsHitsConfirmed']).toEqual([]);
     expect(mapped['sections.pldft.isSanctioned']).toBe(false);
+    expect(mapped['sections.litigation.lawsuits']).toHaveLength(1);
   });
 
   it('maps BigDataCorp CNPJ response to cadastral and sanctions paths', () => {

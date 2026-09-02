@@ -1,6 +1,7 @@
 import type { DocumentType } from '@prisma/client';
 import type { FindingCategory } from '../contracts/enums/intel.enums.js';
 import type { ComplianceDossier } from '../contracts/types/compliance-dossier.types.js';
+import type { Lawsuit } from '../contracts/types/canonical/shared.types.js';
 import type { IntelFinding } from '../contracts/types/intel-dossier.types.js';
 import { normalizeLawsuitItem, normalizeLawsuitList } from './normalizers/lawsuit.normalizer.js';
 import { normalizeProtestItem } from './normalizers/protest.normalizer.js';
@@ -193,7 +194,17 @@ export function mergeIntelIntoComplianceDossier(
     const existing = targetSections[sectionKey] ?? {};
     for (const [field, value] of Object.entries(intelData)) {
       if (Array.isArray(value) && Array.isArray(existing[field])) {
-        existing[field] = [...(existing[field] as unknown[]), ...value];
+        const combined = [...(existing[field] as unknown[]), ...value];
+        existing[field] = field === 'lawsuits' ? normalizeLawsuitList(combined) : combined;
+        if (field === 'lawsuits') {
+          const seen = new Set<string>();
+          existing[field] = (existing[field] as Lawsuit[]).filter((item) => {
+            const key = (item.caseNumber ?? '').replace(/\D/g, '') || JSON.stringify(item);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+        }
       } else if (existing[field] === undefined || existing[field] === null) {
         existing[field] = value;
       } else if (

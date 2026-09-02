@@ -23,7 +23,16 @@
             "MatchRate": 46
           }
         ]
-      }
+      },
+      "Processes": [
+        {
+          "court": "TJSP",
+          "type": "CÍVEL",
+          "status": "EM ANDAMENTO",
+          "numeroProcesso": "0001234-56.2024.8.26.0100",
+          "amount": null
+        }
+      ]
     }
   ]
 }

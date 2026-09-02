@@ -98,4 +98,50 @@ describe('compliance.orchestrator', () => {
       }),
     ).rejects.toBeInstanceOf(ProviderHttpError);
   });
+
+  it('consults BigDataCorp before complementary providers', async () => {
+    const order: string[] = [];
+    mockFindMany.mockResolvedValue([
+      provider('lemit-cnpj'),
+      {
+        ...provider('bigdatacorp-pj-basic_data'),
+        slug: 'bigdatacorp-pj-basic_data',
+        id: 'bigdatacorp-pj-basic_data',
+      },
+    ]);
+    mockConsultDocument.mockImplementation(async (args: { providerSlug: string }) => {
+      order.push(args.providerSlug);
+      return {
+        document: '58426534000164',
+        documentType: 'CNPJ',
+        provider: args.providerSlug,
+        source: 'provider',
+        payload: {},
+        rawPayload: {},
+        cachedAt: new Date().toISOString(),
+        providerId: args.providerSlug,
+        cacheHit: false,
+      };
+    });
+
+    await consultAllForDocument({
+      document: '58426534000164',
+      documentType: 'CNPJ',
+    });
+
+    expect(order[0]).toBe('bigdatacorp-pj-basic_data');
+    expect(order[1]).toBe('lemit-cnpj');
+  });
+
+  it('softFail returns empty list when all providers fail', async () => {
+    mockConsultDocument.mockRejectedValue(new ProviderHttpError('fail', 'a', 502));
+
+    await expect(
+      consultAllForDocument({
+        document: '58426534000164',
+        documentType: 'CNPJ',
+        softFail: true,
+      }),
+    ).resolves.toEqual([]);
+  });
 });

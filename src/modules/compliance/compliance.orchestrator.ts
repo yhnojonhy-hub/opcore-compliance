@@ -2,7 +2,11 @@ import type { DocumentType, Provider } from '@prisma/client';
 import { env } from '../../lib/env.js';
 import { prisma } from '../../db/prisma.js';
 import { ProviderHttpError } from '../../providers/provider.errors.js';
-import { filterProvidersByTier, getBdcMaxTier } from '../../providers/provider.tiers.js';
+import {
+  filterProvidersByTier,
+  getBdcMaxTier,
+  partitionBureauProviders,
+} from '../../providers/provider.tiers.js';
 import { consultDocument, logAudit, type ConsultResult } from './compliance.service.js';
 
 export interface ConsultFailure {
@@ -51,34 +55,17 @@ function isProviderHttpError(error: unknown): error is ProviderHttpError {
   return error instanceof ProviderHttpError;
 }
 
-export async function consultAllForDocument(params: {
+async function consultProvidersBatch(params: {
+  providers: Provider[];
   document: string;
   documentType: DocumentType;
-  providerSlug?: string;
   requestedBy?: string;
-  maxTier?: number;
-  concurrency?: number;
-  failFast?: boolean;
   forceRefresh?: boolean;
-}): Promise<ConsultResult[]> {
-  if (params.providerSlug) {
-    return [
-      await consultDocument({
-        document: params.document,
-        documentType: params.documentType,
-        providerSlug: params.providerSlug,
-        requestedBy: params.requestedBy,
-        forceRefresh: params.forceRefresh,
-      }),
-    ];
-  }
-
-  const providers = await listActiveProvidersForDocument(params.documentType, params.maxTier);
-  const concurrency = params.concurrency ?? env.bdcConsultConcurrency;
-  const failFast = params.failFast ?? false;
-  const failures: ConsultFailure[] = [];
-
-  const results = await mapConcurrent(providers, concurrency, async (provider) => {
+  concurrency: number;
+  failFast: boolean;
+  failures: ConsultFailure[];
+}): Promise<(ConsultResult | null)[]> {
+  return mapConcurrent(params.providers, params.concurrency, async (provider) => {
     try {
       return await consultDocument({
         document: params.document,
@@ -89,7 +76,7 @@ export async function consultAllForDocument(params: {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      failures.push({
+      params.failures.push({
         providerSlug: provider.slug,
         message,
         statusCode: isProviderHttpError(error) ? error.upstreamStatus : undefined,
@@ -105,14 +92,75 @@ export async function consultAllForDocument(params: {
         },
       });
 
-      if (failFast) throw error;
+      if (params.failFast) throw error;
       return null;
     }
   });
+}
 
-  const successful = results.filter((r): r is ConsultResult => r !== null);
+export async function consultAllForDocument(params: {
+  document: string;
+  documentType: DocumentType;
+  providerSlug?: string;
+  requestedBy?: string;
+  maxTier?: number;
+  concurrency?: number;
+  failFast?: boolean;
+  /** When true, return [] instead of throwing if every provider fails. */
+  softFail?: boolean;
+  forceRefresh?: boolean;
+}): Promise<ConsultResult[]> {
+  if (params.providerSlug) {
+    try {
+      return [
+        await consultDocument({
+          document: params.document,
+          documentType: params.documentType,
+          providerSlug: params.providerSlug,
+          requestedBy: params.requestedBy,
+          forceRefresh: params.forceRefresh,
+        }),
+      ];
+    } catch (error) {
+      if (params.softFail) return [];
+      throw error;
+    }
+  }
+
+  const providers = await listActiveProvidersForDocument(params.documentType, params.maxTier);
+  const concurrency = params.concurrency ?? env.bdcConsultConcurrency;
+  const failFast = params.failFast ?? false;
+  const failures: ConsultFailure[] = [];
+  const { primary, complementary } = partitionBureauProviders(providers);
+
+  const primaryResults = await consultProvidersBatch({
+    providers: primary,
+    document: params.document,
+    documentType: params.documentType,
+    requestedBy: params.requestedBy,
+    forceRefresh: params.forceRefresh,
+    concurrency,
+    failFast,
+    failures,
+  });
+
+  const complementaryResults = await consultProvidersBatch({
+    providers: complementary,
+    document: params.document,
+    documentType: params.documentType,
+    requestedBy: params.requestedBy,
+    forceRefresh: params.forceRefresh,
+    concurrency,
+    failFast,
+    failures,
+  });
+
+  const successful = [...primaryResults, ...complementaryResults].filter(
+    (r): r is ConsultResult => r !== null,
+  );
 
   if (successful.length === 0) {
+    if (params.softFail) return [];
     const summary =
       failures.length > 0
         ? failures.map((f) => `${f.providerSlug}: ${f.message}`).join('; ')
