@@ -31,6 +31,37 @@ A API sobe em `http://localhost:3010`.
 
 > Se aparecer `EADDRINUSE` na porta 3010, encerre o processo anterior: `lsof -ti :3010 | xargs kill`
 
+## Deploy com Docker (servidor)
+
+Build e run na rede `caddy` (Postgres em `opcore-compliance-postgres`):
+
+```bash
+cd api
+docker build -t opcore-compliance-api:latest .
+
+# primeira subida: migrate + seed
+docker run -d \
+  --name opcore-compliance-api \
+  --network caddy \
+  --restart unless-stopped \
+  --env-file .env \
+  -e RUN_DB_SEED=true \
+  --label caddy=compliance-api.seudominio.com \
+  --label caddy.reverse_proxy="{{upstreams 3010}}" \
+  opcore-compliance-api:latest
+
+# subidas seguintes (sem seed)
+docker run -d ... opcore-compliance-api:latest
+```
+
+`DATABASE_URL` no `.env` do servidor:
+
+```env
+DATABASE_URL=postgresql://opcore:SENHA@opcore-compliance-postgres:5432/opcore_compliance
+```
+
+O entrypoint executa `prisma migrate deploy` automaticamente. Use `RUN_DB_SEED=true` apenas na primeira vez.
+
 ## Scripts
 
 | Script               | Descrição                                         |
