@@ -1,14 +1,18 @@
 {
   "Result": [
     {
-      "Processes": [
-        {
-          "court": "TRF1",
-          "type": "CRIMINAL",
-          "status": "ARQUIVADO",
-          "amount": null
-        }
-      ]
+      "Processes": {
+        "Lawsuits": [
+          {
+            "Number": "0009999-11.2023.8.26.0100",
+            "Type": "CRIMINAL",
+            "CourtName": "TRF1",
+            "Status": "ARQUIVADO",
+            "Value": null
+          }
+        ],
+        "TotalLawsuits": 1
+      }
     }
   ]
 }

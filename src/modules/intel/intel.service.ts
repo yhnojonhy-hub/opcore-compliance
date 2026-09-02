@@ -336,6 +336,7 @@ export async function regenerateIntelDossier(
     target: existing.target,
     targetType: existing.targetType as TargetType,
     requestedBy,
+    forceRefresh: true,
     existingPartyName: existing.partyName,
   });
 

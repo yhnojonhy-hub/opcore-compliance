@@ -146,12 +146,14 @@ const DATASET_MAPPINGS: Record<
   dynamic_qsa_data: { pj: QSA_MAPPINGS, blocks: ['corporateStructure'], tier: 1 },
   processes: {
     pf: [
-      { source: '$.Result[0].Processes', target: 'sections.litigation.lawsuits' },
       { source: '$.Result[0].Lawsuits', target: 'sections.litigation.lawsuits' },
+      { source: '$.Result[0].Processes', target: 'sections.litigation.lawsuits' },
+      { source: '$.Result[0].Processes.Lawsuits', target: 'sections.litigation.lawsuits' },
     ],
     pj: [
-      { source: '$.Result[0].Processes', target: 'sections.litigationEsg.lawsuits' },
       { source: '$.Result[0].Lawsuits', target: 'sections.litigationEsg.lawsuits' },
+      { source: '$.Result[0].Processes', target: 'sections.litigationEsg.lawsuits' },
+      { source: '$.Result[0].Processes.Lawsuits', target: 'sections.litigationEsg.lawsuits' },
     ],
     blocks: ['litigation', 'litigationEsg'],
     tier: 1,

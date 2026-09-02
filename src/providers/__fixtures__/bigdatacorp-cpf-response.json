@@ -24,15 +24,21 @@
           }
         ]
       },
-      "Processes": [
-        {
-          "court": "TJSP",
-          "type": "CÍVEL",
-          "status": "EM ANDAMENTO",
-          "numeroProcesso": "0001234-56.2024.8.26.0100",
-          "amount": null
-        }
-      ]
+      "Processes": {
+        "Lawsuits": [
+          {
+            "Number": "0001234-56.2024.8.26.0100",
+            "Type": "PROCEDIMENTO COMUM CÍVEL",
+            "MainSubject": "INDENIZAÇÃO POR DANO MORAL",
+            "CourtName": "TJSP",
+            "CourtType": "CIVEL",
+            "Status": "EM ANDAMENTO",
+            "NoticeDate": "2024-03-10T00:00:00",
+            "Value": 15000
+          }
+        ],
+        "TotalLawsuits": 1
+      }
     }
   ]
 }

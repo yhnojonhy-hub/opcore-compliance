@@ -34,7 +34,8 @@
     },
     { "source": "$.Result[0].KycData.SanctionsHistory", "target": "sections.pldft.sanctionsHits" },
     { "source": "$.Result[0].Lawsuits", "target": "sections.litigation.lawsuits" },
-    { "source": "$.Result[0].Processes", "target": "sections.litigation.lawsuits" }
+    { "source": "$.Result[0].Processes", "target": "sections.litigation.lawsuits" },
+    { "source": "$.Result[0].Processes.Lawsuits", "target": "sections.litigation.lawsuits" }
   ],
   "supportedTypes": ["CPF"],
   "isActive": true,
