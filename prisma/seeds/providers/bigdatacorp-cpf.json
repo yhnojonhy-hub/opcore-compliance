@@ -23,21 +23,48 @@
   },
   "authType": "env_headers",
   "fieldMappings": [
-    { "source": "$.Result[0].BasicData.Name", "target": "sections.cadastral.fullName" },
-    { "source": "$.Result[0].BasicData.TaxIdStatus", "target": "sections.cadastral.cpfStatus" },
-    { "source": "$.Result[0].BasicData.BirthDate", "target": "sections.cadastral.birthDate" },
-    { "source": "$.Result[0].BasicData.MotherName", "target": "sections.cadastral.motherName" },
-    { "source": "$.Result[0].KycData.IsCurrentlyPEP", "target": "sections.pldft.isPep" },
+    {
+      "source": "$.Result[0].BasicData.Name",
+      "target": "sections.cadastral.fullName"
+    },
+    {
+      "source": "$.Result[0].BasicData.TaxIdStatus",
+      "target": "sections.cadastral.cpfStatus"
+    },
+    {
+      "source": "$.Result[0].BasicData.BirthDate",
+      "target": "sections.cadastral.birthDate"
+    },
+    {
+      "source": "$.Result[0].BasicData.MotherName",
+      "target": "sections.cadastral.motherName"
+    },
+    {
+      "source": "$.Result[0].KycData.IsCurrentlyPEP",
+      "target": "sections.pldft.isPep"
+    },
     {
       "source": "$.Result[0].KycData.IsCurrentlySanctioned",
       "target": "sections.pldft.isSanctioned"
     },
-    { "source": "$.Result[0].KycData.SanctionsHistory", "target": "sections.pldft.sanctionsHits" },
-    { "source": "$.Result[0].Lawsuits", "target": "sections.litigation.lawsuits" },
-    { "source": "$.Result[0].Processes", "target": "sections.litigation.lawsuits" },
-    { "source": "$.Result[0].Processes.Lawsuits", "target": "sections.litigation.lawsuits" }
+    {
+      "source": "$.Result[0].KycData.SanctionsHistory",
+      "target": "sections.pldft.sanctionsHits"
+    },
+    {
+      "source": "$.Result[0].Lawsuits",
+      "target": "sections.litigation.lawsuits"
+    },
+    {
+      "source": "$.Result[0].Processes",
+      "target": "sections.litigation.lawsuits"
+    },
+    {
+      "source": "$.Result[0].Processes.Lawsuits",
+      "target": "sections.litigation.lawsuits"
+    }
   ],
   "supportedTypes": ["CPF"],
-  "isActive": true,
+  "isActive": false,
   "priority": 10
 }

@@ -72,39 +72,89 @@ docker run -d \
 NODE_ENV=production
 DATABASE_URL=postgresql://opcore:SENHA@opcore-compliance-postgres:5432/opcore_compliance
 CORS_ORIGINS=https://compliance.opcore.com.br
+BDC_MAX_TIER=3
+BDC_CONSULT_CONCURRENCY=10
+BIGDATACORP_ACCESS_TOKEN=...
+BIGDATACORP_TOKEN_ID=...
 ```
 
-O entrypoint executa `prisma migrate deploy` automaticamente. Use `RUN_DB_SEED=true` apenas na primeira vez.
+O entrypoint executa `prisma migrate deploy` automaticamente. Use `RUN_DB_SEED=true` apenas na primeira vez (ou após atualizar seeds locais).
+
+### Catálogo BDC completo (produção)
+
+Seeds compostos `bigdatacorp-cpf` / `bigdatacorp-cnpj` ficam **inativos**. O dossiê usa seeds granulares (People / Companies / On-demand / Marketplace) ativos para CPF e CNPJ.
+
+No servidor, após deploy do código:
+
+```bash
+# 1) Garantir env no container / .env do host
+#    BDC_MAX_TIER=3
+#    BDC_CONSULT_CONCURRENCY=10
+
+# 2) Recriar container com o novo .env (exemplo)
+docker rm -f opcore-compliance-api
+docker run -d \
+  --name opcore-compliance-api \
+  --network caddy \
+  --restart unless-stopped \
+  --env-file .env \
+  -e NODE_ENV=production \
+  --label caddy=api.compliance.opcore.com.br \
+  --label caddy.reverse_proxy="{{upstreams 3010}}" \
+  opcore-compliance-api:latest
+
+# 3) Seed no container (grava isActive no Postgres)
+docker exec -e RUN_DB_SEED=true opcore-compliance-api \
+  sh -c 'cd /app && npx prisma db seed'
+
+# Alternativa sem rebuild: sync remoto a partir da máquina de dev
+# (ativa 196 BDC CPF/CNPJ via API; compostos OFF; opcional FORCE_BDC_TIER=1)
+cd api
+export API_SERVICE_KEY=...   # mesma chave de produção
+export PROD_API_URL=https://api.compliance.opcore.com.br
+export FORCE_BDC_TIER=1      # se o servidor ainda estiver com BDC_MAX_TIER=1
+npm run sync:providers-prod
+```
+
+Datasets com `DATASET DISABLED TEMPORARILY` / `-109` no contrato BDC permanecem ativos no OpCore (soft-fail); habilitar no BDC Center para passar a retornar dados.
 
 ## Scripts
 
-| Script               | Descrição                                         |
-| -------------------- | ------------------------------------------------- |
-| `npm run dev`        | Servidor em modo watch                            |
-| `npm run build`      | Compila TypeScript → `dist/`                      |
-| `npm start`          | Produção (`node dist/index.js`)                   |
-| `npm test`           | Testes (Vitest, sem Postgres)                     |
-| `npm run lint`       | ESLint                                            |
-| `npm run typecheck`  | Verificação de tipos                              |
-| `npm run db:migrate` | Migrations Prisma                                 |
-| `npm run db:seed`    | Seed (mock + brasilapi + lemit + regras de risco) |
-| `npm run db:studio`  | Prisma Studio                                     |
+| Script                         | Descrição                                                       |
+| ------------------------------ | --------------------------------------------------------------- |
+| `npm run dev`                  | Servidor em modo watch                                          |
+| `npm run build`                | Compila TypeScript → `dist/`                                    |
+| `npm start`                    | Produção (`node dist/index.js`)                                 |
+| `npm test`                     | Testes (Vitest, sem Postgres)                                   |
+| `npm run lint`                 | ESLint                                                          |
+| `npm run typecheck`            | Verificação de tipos                                            |
+| `npm run db:migrate`           | Migrations Prisma                                               |
+| `npm run db:seed`              | Seed (mock + brasilapi + lemit + BDC + OSINT + regras de risco) |
+| `npm run db:studio`            | Prisma Studio                                                   |
+| `npm run activate:bdc-full`    | Liga `isActive` nos seeds BDC CPF/CNPJ (compostos OFF)          |
+| `npm run sync:providers-prod`  | Upsert dos seeds ativos na API de produção (`PROD_API_URL`)     |
+| `npm run generate:bdc-catalog` | Regenera seeds do catálogo BDC                                  |
 
 ## Variáveis de ambiente
 
 Copie `.env.example` para `.env`:
 
-| Variável                | Descrição                      | Padrão                                                                |
-| ----------------------- | ------------------------------ | --------------------------------------------------------------------- |
-| `PORT`                  | Porta HTTP                     | `3010`                                                                |
-| `DATABASE_URL`          | Postgres                       | `postgresql://compliance:compliance@127.0.0.1:5435/opcore_compliance` |
-| `JWT_SECRET`            | Assinatura do JWT              | —                                                                     |
-| `JWT_EXPIRES_IN`        | Expiração do token             | `8h`                                                                  |
-| `API_SERVICE_KEY`       | Chave para `POST /auth/token`  | —                                                                     |
-| `CACHE_TTL_DAYS`        | TTL do cache de consultas      | `30`                                                                  |
-| `CORS_ORIGINS`          | Origens permitidas (vírgula)   | `http://localhost:5173`                                               |
-| `DEFAULT_PROVIDER_SLUG` | Provedor padrão (opcional)     | —                                                                     |
-| `LEMIT_API_TOKEN`       | Token Bearer Lemit (Etapa 2.2) | —                                                                     |
+| Variável                   | Descrição                                        | Padrão                                                                |
+| -------------------------- | ------------------------------------------------ | --------------------------------------------------------------------- |
+| `PORT`                     | Porta HTTP                                       | `3010`                                                                |
+| `DATABASE_URL`             | Postgres                                         | `postgresql://compliance:compliance@127.0.0.1:5435/opcore_compliance` |
+| `JWT_SECRET`               | Assinatura do JWT                                | —                                                                     |
+| `JWT_EXPIRES_IN`           | Expiração do token                               | `8h`                                                                  |
+| `API_SERVICE_KEY`          | Chave para `POST /auth/token`                    | —                                                                     |
+| `CACHE_TTL_DAYS`           | TTL do cache de consultas                        | `30`                                                                  |
+| `CORS_ORIGINS`             | Origens permitidas (vírgula)                     | `http://localhost:5173`                                               |
+| `DEFAULT_PROVIDER_SLUG`    | Provedor padrão (opcional)                       | —                                                                     |
+| `LEMIT_API_TOKEN`          | Token Bearer Lemit                               | —                                                                     |
+| `BIGDATACORP_ACCESS_TOKEN` | JWT BDC (`AccessToken`)                          | —                                                                     |
+| `BIGDATACORP_TOKEN_ID`     | ID BDC (`TokenId`)                               | —                                                                     |
+| `BDC_MAX_TIER`             | Máximo `activationTier` consultado (1–3)         | `3` (exemplo); código default `1` se omitido                          |
+| `BDC_CONSULT_CONCURRENCY`  | Paralelismo das consultas BDC                    | `10` (exemplo) / `5` se omitido                                       |
+| `FORCE_BDC_TIER`           | Só no sync prod: força `_bdcMeta.activationTier` | — (ex.: `1` se prod ainda tem `BDC_MAX_TIER=1`)                       |
 
 ## Autenticação
 

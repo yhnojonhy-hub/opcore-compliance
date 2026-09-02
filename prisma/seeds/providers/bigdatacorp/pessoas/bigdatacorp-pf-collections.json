@@ -9,7 +9,7 @@
       "category": "pessoas",
       "activationTier": 1,
       "dataset": "collections",
-      "schemaBlocks": ["credit", "fiscalHealth"]
+      "schemaBlocks": ["credit", "financial"]
     },
     "headers": {
       "Accept": "application/json",
@@ -25,11 +25,19 @@
   "authType": "env_headers",
   "fieldMappings": [
     {
-      "source": "$.Result[0].Collections",
+      "source": "$.Result[0].Collections.IsCurrentlyOnCollection",
       "target": "sections.credit.collectionsPresence"
+    },
+    {
+      "source": "$.Result[0].Collections.IsCurrentlyOnCollection",
+      "target": "sections.financial.isCurrentlyOnCollection"
+    },
+    {
+      "source": "$.Result[0].Collections",
+      "target": "sections.financial.collections"
     }
   ],
   "supportedTypes": ["CPF"],
-  "isActive": false,
+  "isActive": true,
   "priority": 20
 }

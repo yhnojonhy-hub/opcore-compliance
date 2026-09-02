@@ -38,6 +38,6 @@
     }
   ],
   "supportedTypes": ["CPF"],
-  "isActive": false,
+  "isActive": true,
   "priority": 20
 }

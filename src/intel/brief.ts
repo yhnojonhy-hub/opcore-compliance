@@ -60,7 +60,7 @@ const RISK_CATEGORIES = [
 ] as const;
 
 const NEGATIVE_RE =
-  /nenhum|não encontr|nao encontr|não consta|nao consta|sem registro|sem sanção|sem sanco|sem processo|não há |nao ha |lista vazia|sem ocorrência|sem ocorrencia|não aplicável|nao aplicavel|sem hit|sem alerta/;
+  /nenhum|não encontr|nao encontr|não consta|nao consta|nada consta|consultado — nada|consultado - nada|sem registro|sem sanção|sem sanco|sem processo|não há |nao ha |lista vazia|sem ocorrência|sem ocorrencia|não aplicável|nao aplicavel|sem hit|sem alerta|checked_absent|consultedabsent/;
 
 const ADVERSE_RE =
   /sanção|sancao|inidôneo|inidoneo|inabilit|ceis|cnep|cepim|ceaf|ofac|conden|irregular|réu|reu\b|mandado|wanted|red notice|lenién|lenien|contas irregulares|inabilitad|pep\b|politicamente expost/;

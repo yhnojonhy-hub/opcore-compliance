@@ -9,7 +9,7 @@
       "category": "pessoas",
       "activationTier": 2,
       "dataset": "occupation_data",
-      "schemaBlocks": []
+      "schemaBlocks": ["financial", "cadastral"]
     },
     "headers": {
       "Accept": "application/json",
@@ -23,8 +23,13 @@
     }
   },
   "authType": "env_headers",
-  "fieldMappings": [],
+  "fieldMappings": [
+    {
+      "source": "$.Result[0].ProfessionData.Professions",
+      "target": "sections.financial.occupations"
+    }
+  ],
   "supportedTypes": ["CPF"],
-  "isActive": false,
+  "isActive": true,
   "priority": 50
 }

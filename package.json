@@ -21,6 +21,8 @@
     "db:seed": "NODE_ENV=development tsx prisma/seed.ts",
     "generate:bdc-catalog": "tsx scripts/generate-bdc-catalog.ts",
     "generate:osint-seeds": "tsx scripts/generate-osint-seeds.ts",
+    "activate:bdc-full": "tsx scripts/activate-bdc-full.ts",
+    "sync:providers-prod": "tsx scripts/sync-providers-prod.ts",
     "db:studio": "NODE_ENV=development prisma studio",
     "postinstall": "prisma generate"
   },

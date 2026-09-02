@@ -13,60 +13,63 @@ import { prisma } from '../../db/prisma.js';
 import { assessDossierRisk, buildIntelBrief, resolvePurposeAndBasis } from '../../intel/brief.js';
 import { classifyScore, scoreDossier } from '../../intel/scoring.js';
 import { isValidTarget } from '../../providers/adapters/registry.js';
-import { runIntelSearch } from './intel.orchestrator.js';
-import { consultAllForDocument } from '../compliance/compliance.orchestrator.js';
-import type { ConsultResult } from '../compliance/compliance.service.js';
-import {
-  bureauConsultationsToFindings,
-  extractPartyNameFromConsultations,
-} from '../../dossier/bureau-findings.js';
 import { findingsToSections, mergeIntelIntoComplianceDossier } from '../../dossier/intel-bridge.js';
-import { isBigDataCorpSlug } from '../../dossier/section-merge.js';
-import { buildDossier } from '../compliance/dossier.service.js';
+import { assembleDossierFromCache } from '../compliance/dossier.service.js';
 import { serializeIntelDossierResponse } from './intel-response.util.js';
 import type { ComplianceDossier } from '../../contracts/types/compliance-dossier.types.js';
 import { emptyPjSections } from '../../contracts/types/compliance-dossier.types.js';
 import { ComplianceStatus } from '../../contracts/enums/compliance-status.enum.js';
 import { RiskLevel } from '../../contracts/enums/risk-level.enum.js';
+import {
+  derivePillarsFromSources,
+  runFourPillarPipeline,
+  type FourPillarSummary,
+} from './four-pillar.pipeline.js';
 
-function mapDossier(row: {
-  id: string;
-  target: string;
-  targetType: string;
-  status: string;
-  overallScore: number | null;
-  purpose: string;
-  legalBasis: string;
-  deepSearch: boolean;
-  partyName: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  completedAt: Date | null;
-  findings: Array<{
+function mapDossier(
+  row: {
     id: string;
-    category: string;
-    sourceName: string;
-    reliability: string;
-    confidence: number;
-    title: string;
-    summary: string;
-    details: unknown;
-    url: string | null;
-    occurredAt: Date | null;
-    verified: boolean;
-  }>;
-  sources: Array<{
-    id: string;
-    name: string;
-    providerSlug: string | null;
-    category: string;
-    reliability: string;
+    target: string;
+    targetType: string;
     status: string;
-    httpStatus: number | null;
-    durationMs: number | null;
-    error: string | null;
-  }>;
-}): IntelDossierResponse {
+    overallScore: number | null;
+    purpose: string;
+    legalBasis: string;
+    deepSearch: boolean;
+    partyName: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    completedAt: Date | null;
+    findings: Array<{
+      id: string;
+      category: string;
+      sourceName: string;
+      reliability: string;
+      confidence: number;
+      title: string;
+      summary: string;
+      details: unknown;
+      url: string | null;
+      occurredAt: Date | null;
+      verified: boolean;
+    }>;
+    sources: Array<{
+      id: string;
+      name: string;
+      providerSlug: string | null;
+      category: string;
+      reliability: string;
+      status: string;
+      httpStatus: number | null;
+      durationMs: number | null;
+      error: string | null;
+    }>;
+  },
+  extras?: {
+    pillars?: FourPillarSummary;
+    canonical?: ComplianceDossier | null;
+  },
+): IntelDossierResponse {
   const findings = row.findings
     .map((f) => ({
       id: f.id,
@@ -84,7 +87,10 @@ function mapDossier(row: {
       occurredAt: f.occurredAt?.toISOString() ?? null,
       verified: f.verified,
     }))
-    .filter((finding) => finding.title.trim() || finding.summary.trim());
+    .filter((finding) => {
+      if (finding.title.trim() || finding.summary.trim()) return true;
+      return Boolean(finding.details?.consultedAbsent);
+    });
   const sources = row.sources.map((s) => ({
     id: s.id,
     name: s.name,
@@ -107,6 +113,13 @@ function mapDossier(row: {
       })),
     );
   const purpose = row.purpose as DossierPurpose;
+  const pillars =
+    extras?.pillars ??
+    derivePillarsFromSources(
+      sources.map((s) => ({ name: s.name, status: s.status })),
+      findings.map((f) => ({ sourceName: f.sourceName })),
+    );
+
   return serializeIntelDossierResponse({
     id: row.id,
     target: row.target,
@@ -120,6 +133,8 @@ function mapDossier(row: {
     partyName: row.partyName,
     findings,
     sources,
+    pillars,
+    canonical: extras?.canonical ?? null,
     riskBrief: assessDossierRisk(findings),
     intelBrief: buildIntelBrief({ purpose, score, findings, sources }),
     createdAt: row.createdAt.toISOString(),
@@ -135,225 +150,39 @@ async function loadDossier(id: string) {
   });
 }
 
-async function persistBureauBootstrap(params: {
-  dossierId: string;
-  documentType: 'CPF' | 'CNPJ';
-  results: ConsultResult[];
-}): Promise<string | undefined> {
-  const partyName = extractPartyNameFromConsultations(params.results, params.documentType);
-  if (partyName) {
-    await prisma.intelDossier.update({
-      where: { id: params.dossierId },
-      data: { partyName },
-    });
-  }
-
-  const drafts = bureauConsultationsToFindings(params.results, params.documentType);
-  const byProvider = new Map<string, ConsultResult>();
-  for (const result of params.results) {
-    if (!byProvider.has(result.provider)) byProvider.set(result.provider, result);
-  }
-
-  for (const result of byProvider.values()) {
-    const isBdc = isBigDataCorpSlug(result.provider);
-    await prisma.intelDossierSource.create({
-      data: {
-        dossierId: params.dossierId,
-        name: isBdc ? 'BigDataCorp' : result.provider,
-        providerSlug: result.provider,
-        category: 'IDENTITY',
-        reliability: isBdc ? 'PAID' : 'THIRD_PARTY',
-        status: 'ok',
-        durationMs: null,
-        error: null,
-      },
-    });
-  }
-
-  if (drafts.length > 0) {
-    await prisma.intelDossierFinding.createMany({
-      data: drafts.map((finding) => ({
-        dossierId: params.dossierId,
-        category: finding.category,
-        sourceName: finding.sourceName,
-        reliability: finding.reliability,
-        confidence: finding.confidence,
-        title: finding.title,
-        summary: finding.summary,
-        details: finding.details,
-        url: finding.url,
-        occurredAt: finding.occurredAt,
-        verified: finding.verified,
-      })),
-    });
-  }
-
-  return partyName;
-}
-
-async function bootstrapBureauBeforeOsint(params: {
-  dossierId: string;
-  target: string;
-  targetType: TargetType;
-  requestedBy?: string;
-  forceRefresh?: boolean;
-  existingPartyName?: string | null;
-}): Promise<string | undefined> {
-  if (params.targetType !== 'CPF' && params.targetType !== 'CNPJ') {
-    return params.existingPartyName ?? undefined;
-  }
-
-  const results = await consultAllForDocument({
-    document: params.target.replace(/\D/g, ''),
-    documentType: params.targetType,
-    requestedBy: params.requestedBy,
-    forceRefresh: params.forceRefresh,
-    softFail: true,
-  });
-
-  if (results.length === 0) return params.existingPartyName ?? undefined;
-
-  const resolved = await persistBureauBootstrap({
-    dossierId: params.dossierId,
-    documentType: params.targetType,
-    results,
-  });
-  return resolved ?? params.existingPartyName ?? undefined;
-}
-
-export async function createIntelDossier(
-  input: CreateIntelDossierInput,
-): Promise<IntelDossierResponse> {
-  const target = input.target.trim();
-  if (!isValidTarget(input.targetType, target)) {
-    throw new Error(`Alvo inválido para tipo ${input.targetType}`);
-  }
-  const { purpose, legalBasis } = resolvePurposeAndBasis({
-    purpose: input.purpose,
-    legalBasis: input.legalBasis,
-  });
-
-  const dossier = await prisma.intelDossier.create({
-    data: {
-      target,
-      targetType: input.targetType,
-      status: 'PENDING',
-      purpose,
-      legalBasis,
-      deepSearch: input.deepSearch ?? false,
-      partyName: input.partyName,
-      tenantId: input.tenantId,
-      requestedBy: input.requestedBy,
-    },
-  });
-
-  await prisma.intelDossierAuditLog.create({
-    data: {
-      dossierId: dossier.id,
-      action: `created:${purpose}`,
-      actor: input.requestedBy,
-    },
-  });
-
-  let partyNameHint = input.partyName;
-  if (
-    input.includeBureau !== false &&
-    (input.targetType === 'CPF' || input.targetType === 'CNPJ')
-  ) {
-    partyNameHint = await bootstrapBureauBeforeOsint({
-      dossierId: dossier.id,
-      target,
-      targetType: input.targetType,
-      requestedBy: input.requestedBy,
-      forceRefresh: input.forceRefresh,
-      existingPartyName: input.partyName,
-    });
-  }
-
-  await runIntelSearch({
-    dossierId: dossier.id,
-    deepSearch: input.deepSearch ?? false,
-    paidProviders: input.paidProviders,
-    partyNameHint,
-  });
-
-  const full = await loadDossier(dossier.id);
-  if (!full) throw new Error('Dossiê intel não encontrado após criação');
-  return mapDossier(full);
-}
-
-export async function getIntelDossier(id: string): Promise<IntelDossierResponse | null> {
-  const row = await loadDossier(id);
-  if (!row) return null;
-  return mapDossier(row);
-}
-
-export async function listIntelDossiers(params: {
-  target?: string;
-  targetType?: TargetType;
-  status?: string;
-  skip?: number;
-  take?: number;
-}) {
-  const where: Prisma.IntelDossierWhereInput = {};
-  if (params.target) where.target = { contains: params.target };
-  if (params.targetType) where.targetType = params.targetType;
-  if (params.status) where.status = params.status as Prisma.EnumIntelDossierStatusFilter['equals'];
-
-  const [items, total] = await Promise.all([
-    prisma.intelDossier.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      skip: params.skip ?? 0,
-      take: Math.min(params.take ?? 20, 100),
-      include: { findings: true, sources: true },
-    }),
-    prisma.intelDossier.count({ where }),
-  ]);
-
-  return { total, items: items.map(mapDossier) };
-}
-
-export async function regenerateIntelDossier(
-  id: string,
-  requestedBy?: string,
-): Promise<IntelDossierResponse> {
-  const existing = await prisma.intelDossier.findUnique({ where: { id } });
-  if (!existing) throw new Error('Dossiê intel não encontrado');
-
-  await prisma.intelDossierFinding.deleteMany({ where: { dossierId: id } });
-  await prisma.intelDossierSource.deleteMany({ where: { dossierId: id } });
-  await prisma.intelDossier.update({
-    where: { id },
-    data: { status: 'PENDING', overallScore: null, completedAt: null, error: null },
-  });
-  await prisma.intelDossierAuditLog.create({
-    data: { dossierId: id, action: 'regenerated', actor: requestedBy },
-  });
-
-  const partyNameHint = await bootstrapBureauBeforeOsint({
-    dossierId: id,
-    target: existing.target,
-    targetType: existing.targetType as TargetType,
-    requestedBy,
-    forceRefresh: true,
-    existingPartyName: existing.partyName,
-  });
-
-  await runIntelSearch({
-    dossierId: id,
-    deepSearch: existing.deepSearch,
-    partyNameHint,
-  });
-
-  const full = await loadDossier(id);
-  if (!full) throw new Error('Dossiê intel não encontrado após regeneração');
-  return mapDossier(full);
-}
-
-export async function getIntelCanonicalDossier(id: string): Promise<ComplianceDossier | null> {
-  const intel = await getIntelDossier(id);
-  if (!intel) return null;
+async function buildCanonicalForIntel(
+  row: {
+    id: string;
+    target: string;
+    targetType: string;
+    partyName: string | null;
+    overallScore: number | null;
+    createdAt: Date;
+    findings: Array<{
+      id: string;
+      category: string;
+      sourceName: string;
+      reliability: string;
+      confidence: number;
+      title: string;
+      summary: string;
+      details: unknown;
+      url: string | null;
+      occurredAt: Date | null;
+      verified: boolean;
+    }>;
+    sources: Array<{
+      id: string;
+      name: string;
+      providerSlug: string | null;
+      category: string;
+      reliability: string;
+      status: string;
+    }>;
+  },
+  options?: { persist?: boolean },
+): Promise<ComplianceDossier | null> {
+  const intel = mapDossier(row as Parameters<typeof mapDossier>[0]);
 
   if (intel.targetType !== 'CPF' && intel.targetType !== 'CNPJ') {
     const intelSections = findingsToSections(intel.findings, null);
@@ -393,22 +222,173 @@ export async function getIntelCanonicalDossier(id: string): Promise<ComplianceDo
       },
       intelSections,
     );
-    return pruneEmptyDeep(merged, { preserveKeys: ['meta', 'subject', 'risk', 'compliance'] });
+    return pruneEmptyDeep(merged, {
+      preserveKeys: ['meta', 'subject', 'risk', 'compliance', 'consultedAbsent', 'CHECKED_ABSENT'],
+    });
   }
 
   const document = intel.target.replace(/\D/g, '');
-  const { dossier } = await buildDossier({
+  const { dossier } = await assembleDossierFromCache({
     document,
     documentType: intel.targetType,
     requestedBy: undefined,
+    persist: options?.persist ?? false,
   });
   const intelSections = findingsToSections(intel.findings, intel.targetType);
   return pruneEmptyDeep(
     mergeIntelIntoComplianceDossier(dossier as ComplianceDossier, intelSections),
     {
-      preserveKeys: ['meta', 'subject', 'risk', 'compliance'],
+      preserveKeys: ['meta', 'subject', 'risk', 'compliance', 'consultedAbsent', 'CHECKED_ABSENT'],
     },
   );
+}
+
+async function attachFullReport(
+  row: NonNullable<Awaited<ReturnType<typeof loadDossier>>>,
+  pillars?: FourPillarSummary,
+  options?: { persistCanonical?: boolean },
+): Promise<IntelDossierResponse> {
+  const canonical = await buildCanonicalForIntel(row, {
+    persist: options?.persistCanonical ?? false,
+  });
+  return mapDossier(row, { pillars, canonical });
+}
+
+export async function createIntelDossier(
+  input: CreateIntelDossierInput,
+): Promise<IntelDossierResponse> {
+  const target = input.target.trim();
+  if (!isValidTarget(input.targetType, target)) {
+    throw new Error(`Alvo inválido para tipo ${input.targetType}`);
+  }
+  const { purpose, legalBasis } = resolvePurposeAndBasis({
+    purpose: input.purpose,
+    legalBasis: input.legalBasis,
+  });
+
+  const dossier = await prisma.intelDossier.create({
+    data: {
+      target,
+      targetType: input.targetType,
+      status: 'PENDING',
+      purpose,
+      legalBasis,
+      deepSearch: input.deepSearch ?? false,
+      partyName: input.partyName,
+      tenantId: input.tenantId,
+      requestedBy: input.requestedBy,
+    },
+  });
+
+  await prisma.intelDossierAuditLog.create({
+    data: {
+      dossierId: dossier.id,
+      action: `created:${purpose}`,
+      actor: input.requestedBy,
+    },
+  });
+
+  const { pillars } = await runFourPillarPipeline({
+    dossierId: dossier.id,
+    target,
+    targetType: input.targetType,
+    requestedBy: input.requestedBy,
+    forceRefresh: input.forceRefresh,
+    deepSearch: input.deepSearch ?? false,
+    paidProviders: input.paidProviders,
+    includeBureau: input.includeBureau,
+    existingPartyName: input.partyName,
+  });
+
+  const full = await loadDossier(dossier.id);
+  if (!full) throw new Error('Dossiê intel não encontrado após criação');
+  return attachFullReport(full, pillars, { persistCanonical: true });
+}
+
+export async function getIntelDossier(id: string): Promise<IntelDossierResponse | null> {
+  const row = await loadDossier(id);
+  if (!row) return null;
+  if (row.status === 'PENDING' || row.status === 'PARTIAL') {
+    return mapDossier(row, {
+      pillars: derivePillarsFromSources(row.sources, row.findings),
+      canonical: null,
+    });
+  }
+  return attachFullReport(row);
+}
+
+export async function listIntelDossiers(params: {
+  target?: string;
+  targetType?: TargetType;
+  status?: string;
+  skip?: number;
+  take?: number;
+}) {
+  const where: Prisma.IntelDossierWhereInput = {};
+  if (params.target) where.target = { contains: params.target };
+  if (params.targetType) where.targetType = params.targetType;
+  if (params.status) where.status = params.status as Prisma.EnumIntelDossierStatusFilter['equals'];
+
+  const [items, total] = await Promise.all([
+    prisma.intelDossier.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: params.skip ?? 0,
+      take: Math.min(params.take ?? 20, 100),
+      include: { findings: true, sources: true },
+    }),
+    prisma.intelDossier.count({ where }),
+  ]);
+
+  // List stays light: pillars only, no full canonical rebuild per row
+  return {
+    total,
+    items: items.map((row) =>
+      mapDossier(row, {
+        pillars: derivePillarsFromSources(row.sources, row.findings),
+        canonical: null,
+      }),
+    ),
+  };
+}
+
+export async function regenerateIntelDossier(
+  id: string,
+  requestedBy?: string,
+): Promise<IntelDossierResponse> {
+  const existing = await prisma.intelDossier.findUnique({ where: { id } });
+  if (!existing) throw new Error('Dossiê intel não encontrado');
+
+  await prisma.intelDossierFinding.deleteMany({ where: { dossierId: id } });
+  await prisma.intelDossierSource.deleteMany({ where: { dossierId: id } });
+  await prisma.intelDossier.update({
+    where: { id },
+    data: { status: 'PENDING', overallScore: null, completedAt: null, error: null },
+  });
+  await prisma.intelDossierAuditLog.create({
+    data: { dossierId: id, action: 'regenerated', actor: requestedBy },
+  });
+
+  const { pillars } = await runFourPillarPipeline({
+    dossierId: id,
+    target: existing.target,
+    targetType: existing.targetType as TargetType,
+    requestedBy,
+    forceRefresh: true,
+    deepSearch: existing.deepSearch,
+    includeBureau: true,
+    existingPartyName: existing.partyName,
+  });
+
+  const full = await loadDossier(id);
+  if (!full) throw new Error('Dossiê intel não encontrado após regeneração');
+  return attachFullReport(full, pillars, { persistCanonical: true });
+}
+
+export async function getIntelCanonicalDossier(id: string): Promise<ComplianceDossier | null> {
+  const row = await loadDossier(id);
+  if (!row) return null;
+  return buildCanonicalForIntel(row);
 }
 
 export async function buildFullComplianceDossier(params: {
@@ -424,6 +404,5 @@ export async function buildFullComplianceDossier(params: {
     requestedBy: params.requestedBy,
     includeBureau: true,
   });
-  const canonical = await getIntelCanonicalDossier(intel.id);
-  return { intel, canonical };
+  return { intel, canonical: intel.canonical ?? null };
 }

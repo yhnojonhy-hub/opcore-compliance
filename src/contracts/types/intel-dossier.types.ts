@@ -7,6 +7,7 @@ import type {
   TargetType,
 } from '../enums/intel.enums.js';
 import type { DossierIntelBrief, DossierRiskBrief } from '../../intel/brief.js';
+import type { ComplianceDossier } from './compliance-dossier.types.js';
 
 export interface IntelFinding {
   id: string;
@@ -34,6 +35,22 @@ export interface IntelSource {
   error?: string | null;
 }
 
+export interface IntelPillarStatus {
+  id: 'bdc' | 'lemit' | 'brasilapi' | 'extras';
+  label: string;
+  status: 'ok' | 'partial' | 'error' | 'skipped';
+  providerCount: number;
+  findingCount: number;
+  error?: string;
+}
+
+export interface IntelPillarsSummary {
+  bdc: IntelPillarStatus;
+  lemit: IntelPillarStatus;
+  brasilapi: IntelPillarStatus;
+  extras: IntelPillarStatus;
+}
+
 export interface IntelDossierResponse {
   id: string;
   target: string;
@@ -47,6 +64,10 @@ export interface IntelDossierResponse {
   partyName?: string | null;
   findings: IntelFinding[];
   sources: IntelSource[];
+  /** Four-pillar run status (BDC → Lemit → BrasilAPI → Extras). */
+  pillars?: IntelPillarsSummary;
+  /** Canonical ComplianceDossier with evaluateRisk (full report). */
+  canonical?: ComplianceDossier | null;
   riskBrief: DossierRiskBrief;
   intelBrief: DossierIntelBrief;
   createdAt: string;

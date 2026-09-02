@@ -28,6 +28,15 @@ export interface PfFinancial {
   federalDebt: number | null;
   protests: Protest[];
   creditFlags: string[];
+  totalAssets?: string | null;
+  estimatedIncomeRange?: string | null;
+  incomeEstimates?: Record<string, string> | null;
+  taxReturns?: Record<string, unknown>[] | null;
+  financialRiskScore?: number | null;
+  financialRiskLevel?: string | null;
+  isCurrentlyOnCollection?: boolean | null;
+  collections?: Record<string, unknown> | null;
+  occupations?: Record<string, unknown>[] | null;
 }
 
 export interface PfEsg {

@@ -9,7 +9,7 @@
       "category": "pessoas",
       "activationTier": 2,
       "dataset": "financial_risk",
-      "schemaBlocks": []
+      "schemaBlocks": ["financial", "credit"]
     },
     "headers": {
       "Accept": "application/json",
@@ -23,8 +23,37 @@
     }
   },
   "authType": "env_headers",
-  "fieldMappings": [],
+  "fieldMappings": [
+    {
+      "source": "$.Result[0].FinancialRisk.TotalAssets",
+      "target": "sections.financial.totalAssets"
+    },
+    {
+      "source": "$.Result[0].FinancialRisk.EstimatedIncomeRange",
+      "target": "sections.financial.estimatedIncomeRange"
+    },
+    {
+      "source": "$.Result[0].FinancialRisk.FinancialRiskScore",
+      "target": "sections.financial.financialRiskScore"
+    },
+    {
+      "source": "$.Result[0].FinancialRisk.FinancialRiskLevel",
+      "target": "sections.financial.financialRiskLevel"
+    },
+    {
+      "source": "$.Result[0].FinancialRisk.IsCurrentlyOnCollection",
+      "target": "sections.financial.isCurrentlyOnCollection"
+    },
+    {
+      "source": "$.Result[0].FinancialRisk.IsCurrentlyEmployed",
+      "target": "sections.credit.isCurrentlyEmployed"
+    },
+    {
+      "source": "$.Result[0].FinancialRisk.IsCurrentlyOwner",
+      "target": "sections.credit.isCurrentlyOwner"
+    }
+  ],
   "supportedTypes": ["CPF"],
-  "isActive": false,
+  "isActive": true,
   "priority": 50
 }

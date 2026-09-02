@@ -9,27 +9,15 @@ import { getBdcMaxTier } from '../../providers/provider.tiers.js';
 import { consultAllForDocument } from './compliance.orchestrator.js';
 import { getCachedConsultations, logAudit, toConsultationInput } from './compliance.service.js';
 
-export async function buildDossier(params: {
+/** Assemble + evaluateRisk from cached consultations only (no new provider calls). */
+export async function assembleDossierFromCache(params: {
   document: string;
   documentType: DocumentType;
-  providerSlug?: string;
   requestedBy?: string;
-  forceRefresh?: boolean;
-  maxTier?: number;
+  persist?: boolean;
 }) {
-  const maxTier = getBdcMaxTier(params.maxTier);
-
-  await consultAllForDocument({
-    document: params.document,
-    documentType: params.documentType,
-    providerSlug: params.providerSlug,
-    requestedBy: params.requestedBy,
-    maxTier,
-    forceRefresh: params.forceRefresh,
-  });
-
   const consultations = await getCachedConsultations(params.document, params.documentType);
-  const consultationInputs = consultations.map((c) => toConsultationInput(c, !params.forceRefresh));
+  const consultationInputs = consultations.map((c) => toConsultationInput(c, true));
 
   const latestVersion = await prisma.complianceDossier.findFirst({
     where: { document: params.document, documentType: params.documentType },
@@ -37,7 +25,6 @@ export async function buildDossier(params: {
   });
 
   const version = (latestVersion?.version ?? 0) + 1;
-
   const rules = await prisma.riskRule.findMany({ where: { isActive: true } });
 
   const tempDossier = assembleDossier({
@@ -67,40 +54,89 @@ export async function buildDossier(params: {
     requestedBy: params.requestedBy,
   });
 
-  const saved = await prisma.complianceDossier.create({
-    data: {
-      document: params.document,
-      documentType: params.documentType,
-      version,
-      payload: dossier as object,
-      completeness: dossier.meta.completeness,
-      hash: dossier.meta.hash,
-      requestedBy: params.requestedBy,
-      riskAssessment: {
-        create: {
-          level: risk.level as RiskLevel,
-          score: risk.score,
-          factors: risk.factors as unknown as Prisma.InputJsonValue,
-          complianceStatus: risk.complianceStatus as ComplianceStatus,
-          blocked: risk.blocked,
-          requiresManualReview: risk.requiresManualReview,
-          recommendation: risk.recommendation,
+  if (params.persist !== false && consultationInputs.length > 0) {
+    const saved = await prisma.complianceDossier.create({
+      data: {
+        document: params.document,
+        documentType: params.documentType,
+        version,
+        payload: dossier as object,
+        completeness: dossier.meta.completeness,
+        hash: dossier.meta.hash,
+        requestedBy: params.requestedBy,
+        riskAssessment: {
+          create: {
+            level: risk.level as RiskLevel,
+            score: risk.score,
+            factors: risk.factors as unknown as Prisma.InputJsonValue,
+            complianceStatus: risk.complianceStatus as ComplianceStatus,
+            blocked: risk.blocked,
+            requiresManualReview: risk.requiresManualReview,
+            recommendation: risk.recommendation,
+          },
         },
       },
-    },
-    include: { riskAssessment: true },
-  });
+      include: { riskAssessment: true },
+    });
+    dossier.meta.dossierId = saved.id;
 
-  dossier.meta.dossierId = saved.id;
+    await logAudit({
+      action: 'dossier_generated',
+      document: params.document,
+      metadata: {
+        version,
+        riskLevel: risk.level,
+        providerCount: consultationInputs.length,
+        fromCache: true,
+      },
+    });
 
-  await logAudit({
-    action: 'dossier_generated',
-    document: params.document,
-    metadata: { version, riskLevel: risk.level, maxTier, providerCount: consultationInputs.length },
-  });
+    return {
+      dossier: pruneEmptyDeep(dossier, {
+        preserveKeys: [
+          'meta',
+          'subject',
+          'risk',
+          'compliance',
+          'consultedAbsent',
+          'CHECKED_ABSENT',
+        ],
+      }),
+      assessment: saved.riskAssessment,
+    };
+  }
 
   return {
-    dossier: pruneEmptyDeep(dossier, { preserveKeys: ['meta', 'subject', 'risk', 'compliance'] }),
-    assessment: saved.riskAssessment,
+    dossier: pruneEmptyDeep(dossier, {
+      preserveKeys: ['meta', 'subject', 'risk', 'compliance', 'consultedAbsent', 'CHECKED_ABSENT'],
+    }),
+    assessment: null,
   };
+}
+
+export async function buildDossier(params: {
+  document: string;
+  documentType: DocumentType;
+  providerSlug?: string;
+  requestedBy?: string;
+  forceRefresh?: boolean;
+  maxTier?: number;
+}) {
+  const maxTier = getBdcMaxTier(params.maxTier);
+
+  await consultAllForDocument({
+    document: params.document,
+    documentType: params.documentType,
+    providerSlug: params.providerSlug,
+    requestedBy: params.requestedBy,
+    maxTier,
+    forceRefresh: params.forceRefresh,
+  });
+
+  return assembleDossierFromCache({
+    document: params.document,
+    documentType: params.documentType,
+    requestedBy: params.requestedBy,
+    persist: true,
+  });
 }

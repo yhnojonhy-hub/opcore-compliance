@@ -144,4 +144,37 @@ describe('compliance.orchestrator', () => {
       }),
     ).resolves.toEqual([]);
   });
+
+  it('filters by slugPrefixes when provided', async () => {
+    mockFindMany.mockResolvedValue([
+      provider('lemit-cnpj'),
+      {
+        ...provider('bigdatacorp-pj-basic_data'),
+        slug: 'bigdatacorp-pj-basic_data',
+        id: 'bigdatacorp-pj-basic_data',
+      },
+    ]);
+    mockConsultDocument.mockImplementation(async (args: { providerSlug: string }) => ({
+      document: '58426534000164',
+      documentType: 'CNPJ',
+      provider: args.providerSlug,
+      source: 'provider',
+      payload: {},
+      rawPayload: {},
+      cachedAt: new Date().toISOString(),
+      providerId: args.providerSlug,
+      cacheHit: false,
+    }));
+
+    const results = await consultAllForDocument({
+      document: '58426534000164',
+      documentType: 'CNPJ',
+      slugPrefixes: ['bigdatacorp'],
+      skipBdcPartition: true,
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0].provider).toBe('bigdatacorp-pj-basic_data');
+    expect(mockConsultDocument).toHaveBeenCalledTimes(1);
+  });
 });

@@ -25,6 +25,6 @@
   "authType": "env_headers",
   "fieldMappings": [],
   "supportedTypes": ["CPF"],
-  "isActive": false,
+  "isActive": true,
   "priority": 50
 }

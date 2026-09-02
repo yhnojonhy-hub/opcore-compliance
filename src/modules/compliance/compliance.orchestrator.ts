@@ -102,6 +102,10 @@ export async function consultAllForDocument(params: {
   document: string;
   documentType: DocumentType;
   providerSlug?: string;
+  /** Only providers whose slug starts with one of these prefixes. */
+  slugPrefixes?: string[];
+  /** Exact slug allow-list (in addition to active/tier filters). */
+  slugAllowList?: string[];
   requestedBy?: string;
   maxTier?: number;
   concurrency?: number;
@@ -109,6 +113,8 @@ export async function consultAllForDocument(params: {
   /** When true, return [] instead of throwing if every provider fails. */
   softFail?: boolean;
   forceRefresh?: boolean;
+  /** When true, do not split BDC-first (caller already sequenced pillars). */
+  skipBdcPartition?: boolean;
 }): Promise<ConsultResult[]> {
   if (params.providerSlug) {
     try {
@@ -127,37 +133,60 @@ export async function consultAllForDocument(params: {
     }
   }
 
-  const providers = await listActiveProvidersForDocument(params.documentType, params.maxTier);
+  let providers = await listActiveProvidersForDocument(params.documentType, params.maxTier);
+  if (params.slugPrefixes?.length) {
+    providers = providers.filter((p) =>
+      params.slugPrefixes!.some((prefix) => p.slug.toLowerCase().startsWith(prefix.toLowerCase())),
+    );
+  }
+  if (params.slugAllowList?.length) {
+    const allow = new Set(params.slugAllowList.map((s) => s.toLowerCase()));
+    providers = providers.filter((p) => allow.has(p.slug.toLowerCase()));
+  }
+
   const concurrency = params.concurrency ?? env.bdcConsultConcurrency;
   const failFast = params.failFast ?? false;
   const failures: ConsultFailure[] = [];
-  const { primary, complementary } = partitionBureauProviders(providers);
 
-  const primaryResults = await consultProvidersBatch({
-    providers: primary,
-    document: params.document,
-    documentType: params.documentType,
-    requestedBy: params.requestedBy,
-    forceRefresh: params.forceRefresh,
-    concurrency,
-    failFast,
-    failures,
-  });
-
-  const complementaryResults = await consultProvidersBatch({
-    providers: complementary,
-    document: params.document,
-    documentType: params.documentType,
-    requestedBy: params.requestedBy,
-    forceRefresh: params.forceRefresh,
-    concurrency,
-    failFast,
-    failures,
-  });
-
-  const successful = [...primaryResults, ...complementaryResults].filter(
-    (r): r is ConsultResult => r !== null,
-  );
+  let successful: ConsultResult[];
+  if (params.skipBdcPartition) {
+    const results = await consultProvidersBatch({
+      providers,
+      document: params.document,
+      documentType: params.documentType,
+      requestedBy: params.requestedBy,
+      forceRefresh: params.forceRefresh,
+      concurrency,
+      failFast,
+      failures,
+    });
+    successful = results.filter((r): r is ConsultResult => r !== null);
+  } else {
+    const { primary, complementary } = partitionBureauProviders(providers);
+    const primaryResults = await consultProvidersBatch({
+      providers: primary,
+      document: params.document,
+      documentType: params.documentType,
+      requestedBy: params.requestedBy,
+      forceRefresh: params.forceRefresh,
+      concurrency,
+      failFast,
+      failures,
+    });
+    const complementaryResults = await consultProvidersBatch({
+      providers: complementary,
+      document: params.document,
+      documentType: params.documentType,
+      requestedBy: params.requestedBy,
+      forceRefresh: params.forceRefresh,
+      concurrency,
+      failFast,
+      failures,
+    });
+    successful = [...primaryResults, ...complementaryResults].filter(
+      (r): r is ConsultResult => r !== null,
+    );
+  }
 
   if (successful.length === 0) {
     if (params.softFail) return [];

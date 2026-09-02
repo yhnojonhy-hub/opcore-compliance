@@ -9,7 +9,7 @@
       "category": "pessoas",
       "activationTier": 2,
       "dataset": "financial_data",
-      "schemaBlocks": []
+      "schemaBlocks": ["financial", "credit"]
     },
     "headers": {
       "Accept": "application/json",
@@ -23,8 +23,33 @@
     }
   },
   "authType": "env_headers",
-  "fieldMappings": [],
+  "fieldMappings": [
+    {
+      "source": "$.Result[0].FinantialData.TotalAssets",
+      "target": "sections.financial.totalAssets"
+    },
+    {
+      "source": "$.Result[0].FinantialData.IncomeEstimates",
+      "target": "sections.financial.incomeEstimates"
+    },
+    {
+      "source": "$.Result[0].FinantialData.TaxReturns",
+      "target": "sections.financial.taxReturns"
+    },
+    {
+      "source": "$.Result[0].FinancialData.TotalAssets",
+      "target": "sections.financial.totalAssets"
+    },
+    {
+      "source": "$.Result[0].FinancialData.IncomeEstimates",
+      "target": "sections.financial.incomeEstimates"
+    },
+    {
+      "source": "$.Result[0].FinancialData.TaxReturns",
+      "target": "sections.financial.taxReturns"
+    }
+  ],
   "supportedTypes": ["CPF"],
-  "isActive": false,
+  "isActive": true,
   "priority": 50
 }

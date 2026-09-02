@@ -30,6 +30,6 @@
     }
   ],
   "supportedTypes": ["CPF", "CNPJ"],
-  "isActive": false,
+  "isActive": true,
   "priority": 50
 }

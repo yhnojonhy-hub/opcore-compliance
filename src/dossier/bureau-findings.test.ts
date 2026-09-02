@@ -1,55 +1,51 @@
 import { describe, expect, it } from 'vitest';
-import {
-  bureauConsultationsToFindings,
-  extractPartyNameFromConsultations,
-} from './bureau-findings.js';
+import { bureauConsultationsToFindings } from './bureau-findings.js';
 
-describe('bureau-findings', () => {
-  it('extracts partyName preferring BigDataCorp over Lemit', () => {
-    const name = extractPartyNameFromConsultations(
-      [
-        {
-          provider: 'lemit-cpf',
-          payload: { sections: { cadastral: { fullName: 'NOME LEMIT' } } },
-        },
-        {
-          provider: 'bigdatacorp-cpf',
-          payload: { sections: { cadastral: { fullName: 'NOME BDC' } } },
-        },
-      ],
-      'CPF',
-    );
-    expect(name).toBe('NOME BDC');
-  });
-
-  it('projects IDENTITY and LAWSUIT findings from BDC sections', () => {
+describe('bureauConsultationsToFindings absences', () => {
+  it('emits consulted-absent findings when source ok with no material hits', () => {
     const findings = bureauConsultationsToFindings(
       [
         {
-          provider: 'bigdatacorp-cpf',
+          provider: 'bigdatacorp-pf-basic_data',
           payload: {
             sections: {
-              cadastral: { fullName: 'FULANO DE TAL', cpfStatus: 'REGULAR' },
-              litigation: {
-                lawsuits: [
-                  {
-                    caseNumber: '0001234-56.2024.8.26.0100',
-                    court: 'TJSP',
-                    type: 'CÍVEL',
-                    status: 'EM ANDAMENTO',
-                  },
-                ],
-              },
+              cadastral: { fullName: 'MARIA' },
+              litigation: { lawsuits: [] },
+              pldft: {},
             },
           },
         },
       ],
       'CPF',
+      { emitAbsences: true },
     );
 
-    expect(findings.some((f) => f.category === 'IDENTITY' && f.title === 'FULANO DE TAL')).toBe(
-      true,
+    expect(findings.some((f) => f.category === 'IDENTITY' && f.title === 'MARIA')).toBe(true);
+    const absent = findings.filter(
+      (f) => (f.details as { consultedAbsent?: boolean }).consultedAbsent,
     );
-    expect(findings.some((f) => f.category === 'LAWSUIT')).toBe(true);
+    expect(absent.length).toBeGreaterThan(0);
+    expect(
+      absent.every(
+        (f) =>
+          f.title.includes('Consultado — nada consta') || f.title.includes('Consultado — Serasa'),
+      ),
+    ).toBe(true);
+  });
+
+  it('does not emit absences when emitAbsences is false', () => {
+    const findings = bureauConsultationsToFindings(
+      [
+        {
+          provider: 'lemit-cpf',
+          payload: { sections: { cadastral: { fullName: 'MARIA' } } },
+        },
+      ],
+      'CPF',
+      { emitAbsences: false },
+    );
+    expect(
+      findings.every((f) => !(f.details as { consultedAbsent?: boolean }).consultedAbsent),
+    ).toBe(true);
   });
 });
