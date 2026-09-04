@@ -87,4 +87,6 @@ export interface CreateIntelDossierInput {
   requestedBy?: string;
   includeBureau?: boolean;
   forceRefresh?: boolean;
+  /** When true, return PENDING immediately and finish pillars in background. */
+  async?: boolean;
 }

@@ -1,4 +1,13 @@
-import type { Lawsuit, Protest, SanctionHit, UboNode } from './shared.types.js';
+import type {
+  Address,
+  EmailContact,
+  Lawsuit,
+  Phone,
+  Protest,
+  SanctionHit,
+  UboNode,
+  Vehicle,
+} from './shared.types.js';
 
 export interface QsaMember {
   name: string | null;
@@ -30,6 +39,15 @@ export interface PjCadastral {
   openingDate: string | null;
   cnae: string | null;
   cnaeMatch: boolean | null;
+  cnaeDescription?: string | null;
+  companyType?: string | null;
+  phones?: Phone[];
+  emails?: EmailContact[];
+  addresses?: Address[];
+  vehicles?: Vehicle[];
+  /** Transient mapping keys — merged into phones by normalizer */
+  mobilePhones?: unknown;
+  landlinePhones?: unknown;
 }
 
 export interface PjCorporateStructure {

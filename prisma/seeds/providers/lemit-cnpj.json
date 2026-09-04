@@ -2,21 +2,35 @@
   "slug": "lemit-cnpj",
   "name": "Lemit — CNPJ",
   "baseUrl": "https://api.lemit.com.br",
-  "httpMethod": "GET",
+  "httpMethod": "POST",
   "requestTemplate": {
-    "path": "/api/v1/consulta/{{document}}",
+    "path": "/api/v1/consulta/empresa",
     "headers": {
       "Accept": "application/json",
-      "User-Agent": "OpCore-Compliance/1.0 (homolog)"
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": "OpCore-Compliance/1.0"
+    },
+    "body": {
+      "documento": "{{document}}"
     }
   },
   "authType": "bearer",
   "authConfigRef": "LEMIT_API_TOKEN",
   "fieldMappings": [
-    { "source": "$.razao_social", "target": "sections.cadastral.legalName" },
-    { "source": "$.nome_fantasia", "target": "sections.cadastral.tradeName" },
-    { "source": "$.situacao_cadastral", "target": "sections.cadastral.cnpjStatus" },
-    { "source": "$.protestos", "target": "sections.financial.protests" }
+    { "source": "$.empresa.razao_social", "target": "sections.cadastral.legalName" },
+    { "source": "$.empresa.nome_fantasia", "target": "sections.cadastral.tradeName" },
+    { "source": "$.empresa.situacao", "target": "sections.cadastral.cnpjStatus" },
+    { "source": "$.empresa.data_fundacao", "target": "sections.cadastral.openingDate" },
+    { "source": "$.empresa.tipo", "target": "sections.cadastral.companyType" },
+    { "source": "$.empresa.cnae.numero", "target": "sections.cadastral.cnae" },
+    { "source": "$.empresa.cnae.descricao", "target": "sections.cadastral.cnaeDescription" },
+    { "source": "$.empresa.cnaes_secundarios", "target": "sections.cadastral.activities" },
+    { "source": "$.empresa.endereco", "target": "sections.cadastral.addresses" },
+    { "source": "$.empresa.celulares", "target": "sections.cadastral.mobilePhones" },
+    { "source": "$.empresa.fixos", "target": "sections.cadastral.landlinePhones" },
+    { "source": "$.empresa.emails", "target": "sections.cadastral.emails" },
+    { "source": "$.empresa.carros", "target": "sections.cadastral.vehicles" },
+    { "source": "$.empresa.socios", "target": "sections.corporateStructure.qsa" }
   ],
   "supportedTypes": ["CNPJ"],
   "isActive": true,

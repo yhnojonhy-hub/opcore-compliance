@@ -7,7 +7,8 @@ import {
   extractPartyNameFromConsultations,
   type BureauFindingDraft,
 } from '../../dossier/bureau-findings.js';
-import { isBigDataCorpSlug } from '../../dossier/section-merge.js';
+import { isPaidBureauSlug } from '../../dossier/section-merge.js';
+import { ProviderHttpError } from '../../providers/provider.errors.js';
 import { prisma } from '../../db/prisma.js';
 import type { Prisma } from '@prisma/client';
 
@@ -31,6 +32,13 @@ export interface FourPillarSummary {
 
 function emptyPillar(id: PillarId, label: string): PillarStatus {
   return { id, label, status: 'skipped', providerCount: 0, findingCount: 0 };
+}
+
+async function markPartial(dossierId: string): Promise<void> {
+  await prisma.intelDossier.update({
+    where: { id: dossierId },
+    data: { status: 'PARTIAL' },
+  });
 }
 
 async function persistPillarFindings(params: {
@@ -65,7 +73,7 @@ async function persistPillarFindings(params: {
         name: params.pillarName,
         providerSlug: result.provider,
         category: 'IDENTITY',
-        reliability: isBigDataCorpSlug(result.provider) ? 'PAID' : 'THIRD_PARTY',
+        reliability: isPaidBureauSlug(result.provider) ? 'PAID' : 'THIRD_PARTY',
         status: 'ok',
         durationMs: null,
         error: null,
@@ -106,6 +114,48 @@ async function persistPillarFindings(params: {
   }
 
   return { partyName, findingCount: drafts.length };
+}
+
+/** Lemit 404 = documento consultado e fora da base — não é outage do pilar. */
+async function persistLemitNotFound(params: {
+  dossierId: string;
+  providerSlug: string;
+}): Promise<number> {
+  await prisma.intelDossierSource.create({
+    data: {
+      dossierId: params.dossierId,
+      name: 'Lemit',
+      providerSlug: params.providerSlug,
+      category: 'IDENTITY',
+      reliability: 'PAID',
+      status: 'ok',
+      durationMs: null,
+      error: null,
+    },
+  });
+
+  await prisma.intelDossierFinding.createMany({
+    data: [
+      {
+        dossierId: params.dossierId,
+        category: 'IDENTITY',
+        sourceName: 'Lemit',
+        reliability: 'PAID',
+        confidence: 70,
+        title: 'Consultado — nada consta na base Lemit',
+        summary: 'Lemit foi consultada e não retornou registro para o documento.',
+        details: {
+          consultedAbsent: true,
+          label: 'identidade cadastral',
+          provider: params.providerSlug,
+          status: 'CHECKED_ABSENT',
+        } as Prisma.InputJsonValue,
+        verified: true,
+      },
+    ],
+  });
+
+  return 1;
 }
 
 /**
@@ -177,8 +227,9 @@ export async function runFourPillarPipeline(params: {
         error: error instanceof Error ? error.message : String(error),
       };
     }
+    await markPartial(params.dossierId);
 
-    // 2) Lemit
+    // 2) Lemit — 404 = CHECKED_ABSENT (ok); 401/403/5xx = error
     const lemitSlug = params.targetType === 'CPF' ? 'lemit-cpf' : 'lemit-cnpj';
     try {
       const lemitResults = await consultAllForDocument({
@@ -187,7 +238,7 @@ export async function runFourPillarPipeline(params: {
         providerSlug: lemitSlug,
         requestedBy: params.requestedBy,
         forceRefresh: params.forceRefresh,
-        softFail: true,
+        softFail: false,
       });
       bureauResults.push(...lemitResults);
       const persisted = await persistPillarFindings({
@@ -207,15 +258,30 @@ export async function runFourPillarPipeline(params: {
         error: lemitResults.length === 0 ? 'Sem resposta Lemit' : undefined,
       };
     } catch (error) {
-      pillars.lemit = {
-        id: 'lemit',
-        label: 'Lemit',
-        status: 'error',
-        providerCount: 0,
-        findingCount: 0,
-        error: error instanceof Error ? error.message : String(error),
-      };
+      if (error instanceof ProviderHttpError && error.upstreamStatus === 404) {
+        const findingCount = await persistLemitNotFound({
+          dossierId: params.dossierId,
+          providerSlug: lemitSlug,
+        });
+        pillars.lemit = {
+          id: 'lemit',
+          label: 'Lemit',
+          status: 'ok',
+          providerCount: 1,
+          findingCount,
+        };
+      } else {
+        pillars.lemit = {
+          id: 'lemit',
+          label: 'Lemit',
+          status: 'error',
+          providerCount: 0,
+          findingCount: 0,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
     }
+    await markPartial(params.dossierId);
 
     // 3) BrasilAPI
     const brasilSlug = params.targetType === 'CPF' ? 'brasilapi-cpf' : 'brasilapi-cnpj';
@@ -255,6 +321,7 @@ export async function runFourPillarPipeline(params: {
         error: error instanceof Error ? error.message : String(error),
       };
     }
+    await markPartial(params.dossierId);
   } else {
     pillars.bdc.status = 'skipped';
     pillars.lemit.status = 'skipped';

@@ -4,7 +4,7 @@ import { asList } from '../contracts/utils/array.util.js';
 import { flatMappedToSections } from '../contracts/utils/mapped-payload.util.js';
 import { normalizeLawsuitList } from './normalizers/lawsuit.normalizer.js';
 import { asRecord, readString } from './normalizers/read.util.js';
-import { isBigDataCorpSlug } from './section-merge.js';
+import { isBigDataCorpSlug, isLemitSlug, isPaidBureauSlug } from './section-merge.js';
 
 export interface BureauFindingDraft {
   category: FindingCategory;
@@ -21,7 +21,7 @@ export interface BureauFindingDraft {
 
 function providerDisplayName(slug: string): string {
   if (isBigDataCorpSlug(slug)) return 'BigDataCorp';
-  if (slug.startsWith('lemit')) return 'Lemit';
+  if (isLemitSlug(slug)) return 'Lemit';
   if (slug.startsWith('brasilapi')) return 'Brasil API';
   return slug;
 }
@@ -78,7 +78,8 @@ export function extractPartyNameFromConsultations(
 ): string | undefined {
   const ordered = [
     ...results.filter((r) => isBigDataCorpSlug(r.provider)),
-    ...results.filter((r) => !isBigDataCorpSlug(r.provider)),
+    ...results.filter((r) => isLemitSlug(r.provider)),
+    ...results.filter((r) => !isBigDataCorpSlug(r.provider) && !isLemitSlug(r.provider)),
   ];
   for (const result of ordered) {
     const cadastral = sectionsOf(result.payload).cadastral ?? {};
@@ -105,10 +106,12 @@ export function bureauConsultationsToFindings(
 
   const ordered = [
     ...results.filter((r) => isBigDataCorpSlug(r.provider)),
-    ...results.filter((r) => !isBigDataCorpSlug(r.provider)),
+    ...results.filter((r) => isLemitSlug(r.provider)),
+    ...results.filter((r) => !isBigDataCorpSlug(r.provider) && !isLemitSlug(r.provider)),
   ];
 
   let identityDone = false;
+  let anyContacts = false;
   let anyLawsuit = false;
   let anySanction = false;
   let anyPep = false;
@@ -117,11 +120,12 @@ export function bureauConsultationsToFindings(
   let anyFinancial = false;
   let pillarSource = options?.pillarLabel ?? 'Bureau';
   let pillarReliability: SourceReliability = 'THIRD_PARTY';
+  const isLemitPillar = options?.pillarLabel === 'Lemit';
 
   for (const result of ordered) {
     const sourceName = providerDisplayName(result.provider);
     pillarSource = sourceName;
-    const reliability: SourceReliability = isBigDataCorpSlug(result.provider)
+    const reliability: SourceReliability = isPaidBureauSlug(result.provider)
       ? 'PAID'
       : 'THIRD_PARTY';
     pillarReliability = reliability;
@@ -131,6 +135,8 @@ export function bureauConsultationsToFindings(
     const litigation = sections.litigation ?? sections.litigationEsg ?? {};
     const financial = sections.financial ?? sections.fiscalHealth ?? {};
     const credit = sections.credit ?? {};
+    const corporateLinks = sections.corporateLinks ?? {};
+    const corporateStructure = sections.corporateStructure ?? {};
 
     if (!identityDone) {
       const name =
@@ -143,7 +149,7 @@ export function bureauConsultationsToFindings(
           category: 'IDENTITY',
           sourceName,
           reliability,
-          confidence: isBigDataCorpSlug(result.provider) ? 96 : 82,
+          confidence: isPaidBureauSlug(result.provider) ? 96 : 82,
           title: name,
           summary: status
             ? `Situação cadastral: ${status}`
@@ -156,12 +162,184 @@ export function bureauConsultationsToFindings(
             cnpjStatus: cadastral.cnpjStatus ?? null,
             birthDate: cadastral.birthDate ?? null,
             motherName: cadastral.motherName ?? null,
+            gender: cadastral.gender ?? null,
+            deceased: cadastral.deceased ?? null,
             provider: result.provider,
           } as Prisma.InputJsonValue,
           verified: true,
         });
         identityDone = true;
       }
+    }
+
+    const phones = asList(cadastral.phones);
+    const emails = asList(cadastral.emails);
+    const addresses = asList(cadastral.addresses);
+    if (phones.length > 0 || emails.length > 0 || addresses.length > 0) {
+      anyContacts = true;
+      findings.push({
+        category: 'IDENTITY',
+        sourceName,
+        reliability,
+        confidence: 88,
+        title: 'Contatos cadastrais',
+        summary: [
+          phones.length ? `${phones.length} telefone(s)` : null,
+          emails.length ? `${emails.length} e-mail(s)` : null,
+          addresses.length ? `${addresses.length} endereço(s)` : null,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+        details: {
+          phones,
+          emails,
+          addresses,
+          provider: result.provider,
+        } as Prisma.InputJsonValue,
+        verified: false,
+      });
+    }
+
+    const vehicles = asList(cadastral.vehicles);
+    if (vehicles.length > 0) {
+      findings.push({
+        category: 'IDENTITY',
+        sourceName,
+        reliability,
+        confidence: 84,
+        title: `${vehicles.length} veículo(s) associado(s)`,
+        summary: vehicles
+          .slice(0, 3)
+          .map((v) => {
+            const item = asRecord(v);
+            return [readString(item.plate, item.placa), readString(item.makeModel, item.marca)]
+              .filter(Boolean)
+              .join(' ');
+          })
+          .filter(Boolean)
+          .join(' · '),
+        details: { vehicles, provider: result.provider } as Prisma.InputJsonValue,
+        verified: false,
+      });
+    }
+
+    const relatedPeople = asList(corporateLinks.relatedPeople);
+    if (relatedPeople.length > 0) {
+      findings.push({
+        category: 'IDENTITY',
+        sourceName,
+        reliability,
+        confidence: 82,
+        title: `${relatedPeople.length} vínculo(s) pessoal(is)`,
+        summary: relatedPeople
+          .slice(0, 4)
+          .map((p) => {
+            const item = asRecord(p);
+            return [
+              readString(item.name, item.nome_vinculo),
+              readString(item.relationType, item.tipo_vinculo),
+            ]
+              .filter(Boolean)
+              .join(' — ');
+          })
+          .filter(Boolean)
+          .join('; '),
+        details: { relatedPeople, provider: result.provider } as Prisma.InputJsonValue,
+        verified: false,
+      });
+    }
+
+    const shareholdings = asList(corporateLinks.shareholdings);
+    if (shareholdings.length > 0) {
+      findings.push({
+        category: 'IDENTITY',
+        sourceName,
+        reliability,
+        confidence: 86,
+        title: `${shareholdings.length} participação(ões) societária(s)`,
+        summary: shareholdings
+          .slice(0, 4)
+          .map((s) => {
+            const item = asRecord(s);
+            const pct = item.sharePercent ?? item.participacao_socio;
+            return [
+              readString(item.name, item.nome),
+              pct != null ? `${String(pct)}%` : null,
+              readString(item.cadastralStatus, item.situacao_cadastral),
+            ]
+              .filter(Boolean)
+              .join(' · ');
+          })
+          .filter(Boolean)
+          .join('; '),
+        details: { shareholdings, provider: result.provider } as Prisma.InputJsonValue,
+        verified: false,
+      });
+    }
+
+    const qsa = asList(corporateStructure.qsa);
+    if (qsa.length > 0 && isLemitSlug(result.provider)) {
+      findings.push({
+        category: 'IDENTITY',
+        sourceName,
+        reliability,
+        confidence: 86,
+        title: `Quadro societário · ${qsa.length} sócio(s)`,
+        summary: qsa
+          .slice(0, 4)
+          .map((s) => {
+            const item = asRecord(s);
+            return [
+              readString(item.name, item.nome),
+              item.sharePercent != null ? `${item.sharePercent}%` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ');
+          })
+          .filter(Boolean)
+          .join('; '),
+        details: { qsa, provider: result.provider } as Prisma.InputJsonValue,
+        verified: false,
+      });
+    }
+
+    const creditFlags = asList(financial.creditFlags).map((f) =>
+      typeof f === 'string' ? f : String(f),
+    );
+    if (creditFlags.length > 0 && !readString(financial.financialRiskLevel)) {
+      anyFinancial = true;
+      findings.push({
+        category: 'FINANCIAL',
+        sourceName,
+        reliability,
+        confidence: 87,
+        title: `Risco de crédito · ${creditFlags[0]}`,
+        summary: creditFlags.join(', '),
+        details: {
+          creditFlags,
+          provider: result.provider,
+        } as Prisma.InputJsonValue,
+        verified: false,
+      });
+    }
+
+    const estimatedIncome = financial.estimatedIncome;
+    if (estimatedIncome != null && !isEmptyValue(estimatedIncome)) {
+      anyFinancial = true;
+      findings.push({
+        category: 'FINANCIAL',
+        sourceName,
+        reliability,
+        confidence: 80,
+        title: 'Renda estimada',
+        summary: `Renda estimada: ${String(estimatedIncome)}`,
+        details: {
+          estimatedIncome,
+          occupation: cadastral.occupation ?? null,
+          provider: result.provider,
+        } as Prisma.InputJsonValue,
+        verified: false,
+      });
     }
 
     if (pldft.isPep === true) {
@@ -210,7 +388,7 @@ export function bureauConsultationsToFindings(
         category: 'LAWSUIT',
         sourceName,
         reliability,
-        confidence: isBigDataCorpSlug(result.provider) ? 92 : 80,
+        confidence: isPaidBureauSlug(result.provider) ? 92 : 80,
         title: lawsuit.caseNumber || lawsuit.type || 'Processo',
         summary: [lawsuit.court, lawsuit.type, lawsuit.status].filter(Boolean).join(' · '),
         details: { ...lawsuit, provider: result.provider } as Prisma.InputJsonValue,
@@ -426,55 +604,77 @@ export function bureauConsultationsToFindings(
         ),
       );
     }
-    if (!anyLawsuit) {
-      findings.push(
-        absentFinding('LAWSUIT', pillarSource, pillarReliability, 'processos judiciais', 'pillar'),
-      );
-    }
-    if (!anySanction) {
-      findings.push(
-        absentFinding('SANCTION', pillarSource, pillarReliability, 'sanções', 'pillar'),
-      );
-    }
-    if (!anyPep) {
-      findings.push(
-        absentFinding('ELECTORAL', pillarSource, pillarReliability, 'cadastro PEP', 'pillar'),
-      );
-    }
-    if (!anyProtest) {
-      findings.push(
-        absentFinding('FINANCIAL', pillarSource, pillarReliability, 'protestos', 'pillar'),
-      );
-    }
-    if (!anyCollection && !anyFinancial) {
-      findings.push(
-        absentFinding(
-          'FINANCIAL',
-          pillarSource,
-          pillarReliability,
-          'cobranças / collections',
-          'pillar',
-        ),
-      );
-    }
-    // Serasa is not in the catalog; Boa Vista/Quod are marketplace and may be disabled.
-    if (!options?.pillarLabel || options.pillarLabel === 'BigDataCorp') {
-      findings.push({
-        category: 'FINANCIAL',
-        sourceName: pillarSource,
-        reliability: pillarReliability,
-        confidence: 60,
-        title: 'Consultado — Serasa não disponível neste dossiê',
-        summary:
-          'Não há integração Serasa no catálogo. Crédito marketplace (Boa Vista/Quod) só entra quando o dataset estiver ativo no contrato BigDataCorp.',
-        details: {
-          consultedAbsent: true,
-          label: 'Serasa / birô clássico',
-          status: 'CHECKED_ABSENT',
-          note: 'serasa_not_in_catalog',
-        } as Prisma.InputJsonValue,
-        verified: true,
-      });
+
+    // Lemit só cobre cadastro/contatos/crédito — não emitir lacunas de BDC (processos, PEP, Serasa).
+    if (isLemitPillar) {
+      if (identityDone && !anyContacts) {
+        findings.push(
+          absentFinding(
+            'IDENTITY',
+            pillarSource,
+            pillarReliability,
+            'contatos cadastrais',
+            'pillar',
+          ),
+        );
+      }
+    } else {
+      if (!anyLawsuit) {
+        findings.push(
+          absentFinding(
+            'LAWSUIT',
+            pillarSource,
+            pillarReliability,
+            'processos judiciais',
+            'pillar',
+          ),
+        );
+      }
+      if (!anySanction) {
+        findings.push(
+          absentFinding('SANCTION', pillarSource, pillarReliability, 'sanções', 'pillar'),
+        );
+      }
+      if (!anyPep) {
+        findings.push(
+          absentFinding('ELECTORAL', pillarSource, pillarReliability, 'cadastro PEP', 'pillar'),
+        );
+      }
+      if (!anyProtest) {
+        findings.push(
+          absentFinding('FINANCIAL', pillarSource, pillarReliability, 'protestos', 'pillar'),
+        );
+      }
+      if (!anyCollection && !anyFinancial) {
+        findings.push(
+          absentFinding(
+            'FINANCIAL',
+            pillarSource,
+            pillarReliability,
+            'cobranças / collections',
+            'pillar',
+          ),
+        );
+      }
+      // Serasa is not in the catalog; Boa Vista/Quod are marketplace and may be disabled.
+      if (!options?.pillarLabel || options.pillarLabel === 'BigDataCorp') {
+        findings.push({
+          category: 'FINANCIAL',
+          sourceName: pillarSource,
+          reliability: pillarReliability,
+          confidence: 60,
+          title: 'Consultado — Serasa não disponível neste dossiê',
+          summary:
+            'Não há integração Serasa no catálogo. Crédito marketplace (Boa Vista/Quod) só entra quando o dataset estiver ativo no contrato BigDataCorp.',
+          details: {
+            consultedAbsent: true,
+            label: 'Serasa / birô clássico',
+            status: 'CHECKED_ABSENT',
+            note: 'serasa_not_in_catalog',
+          } as Prisma.InputJsonValue,
+          verified: true,
+        });
+      }
     }
   }
 

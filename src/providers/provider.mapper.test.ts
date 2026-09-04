@@ -46,29 +46,74 @@ describe('provider.mapper', () => {
     expect(mapped['sections.cadastral.cpfRegular']).toBe(true);
   });
 
-  it('maps Lemit CPF response to cadastral and financial paths', () => {
+  it('maps Lemit CPF response to full cadastral, contacts, financial and corporate paths', () => {
     const seed = loadProviderSeed('providers/lemit-cpf.json');
     const raw = loadFixture('lemit-cpf-response.json');
     const mapped = applyFieldMappings(raw, seed.fieldMappings);
 
-    expect(mapped['sections.cadastral.fullName']).toBe('FULANO DE TAL SILVA');
+    expect(mapped['sections.cadastral.fullName']).toBe('JOAO SILVA');
     expect(mapped['sections.cadastral.cpfStatus']).toBe('REGULAR');
-    expect(mapped['sections.cadastral.birthDate']).toBe('1990-05-15');
-    expect(mapped['sections.cadastral.motherName']).toBe('MARIA DA SILVA');
-    expect(mapped['sections.financial.protests']).toHaveLength(1);
+    expect(mapped['sections.cadastral.cpfRegular']).toBe(true);
+    expect(mapped['sections.cadastral.birthDate']).toBe('1970-10-01T00:00:00-03:00');
+    expect(mapped['sections.cadastral.motherName']).toBe('MARIA SILVA');
+    expect(mapped['sections.cadastral.gender']).toBe('M');
+    expect(mapped['sections.cadastral.deceased']).toBe(false);
+    expect(mapped['sections.cadastral.phones']).toHaveLength(2);
+    expect((mapped['sections.cadastral.phones'] as { type: string }[])[0].type).toBe('mobile');
+    expect((mapped['sections.cadastral.phones'] as { number: string }[])[0].number).toBe(
+      '999990000',
+    );
+    expect(mapped['sections.cadastral.emails']).toHaveLength(1);
+    expect((mapped['sections.cadastral.emails'] as { hasCookie: boolean }[])[0].hasCookie).toBe(
+      true,
+    );
+    expect(mapped['sections.cadastral.addresses']).toHaveLength(1);
+    expect((mapped['sections.cadastral.addresses'] as { city: string }[])[0].city).toBe(
+      'SAO PAULO',
+    );
+    expect(mapped['sections.cadastral.vehicles']).toHaveLength(1);
+    expect((mapped['sections.cadastral.vehicles'] as { renavam: string }[])[0].renavam).toBe(
+      '123456789',
+    );
+    expect(mapped['sections.corporateLinks.relatedPeople']).toHaveLength(2);
+    expect(mapped['sections.corporateLinks.shareholdings']).toHaveLength(2);
+    expect(mapped['sections.financial.estimatedIncome']).toBe(788);
+    expect(mapped['sections.financial.creditFlags']).toEqual(['BAIXISSIMO RISCO']);
+    expect(mapped['sections.financial.financialRiskLevel']).toBe('BAIXISSIMO RISCO');
+    expect(mapped['sections.cadastral.mobilePhones']).toBeUndefined();
+    expect(mapped['sections.cadastral.landlinePhones']).toBeUndefined();
   });
 
-  it('maps Lemit CNPJ response to cadastral and financial paths', () => {
+  it('maps Lemit CNPJ response to cadastral, contacts, vehicles and QSA', () => {
     const seed = loadProviderSeed('providers/lemit-cnpj.json');
     const raw = loadFixture('lemit-cnpj-response.json');
     const mapped = applyFieldMappings(raw, seed.fieldMappings);
 
-    expect(mapped['sections.cadastral.legalName']).toBe('OPEN KNOWLEDGE BRASIL');
-    expect(mapped['sections.cadastral.tradeName']).toBe('REDE PELO CONHECIMENTO LIVRE');
+    expect(mapped['sections.cadastral.legalName']).toBe('EMPRESA EXEMPLO LTDA ME');
+    expect(mapped['sections.cadastral.tradeName']).toBe('EMPRESA EXEMPLO');
     expect(mapped['sections.cadastral.cnpjStatus']).toBe('ATIVA');
-    expect(mapped['sections.financial.protests']).toHaveLength(1);
-    const protest = (mapped['sections.financial.protests'] as { amount: number }[])[0];
-    expect(protest.amount).toBe(3200.5);
+    expect(mapped['sections.cadastral.openingDate']).toBe('2001-02-03T00:00:00-03:00');
+    expect(mapped['sections.cadastral.companyType']).toBe('ME');
+    expect(mapped['sections.cadastral.cnae']).toBe('00001');
+    expect(mapped['sections.cadastral.cnaeDescription']).toBe('SERVICOS DE EXEMPLOS DE EMPRESAS');
+    expect(mapped['sections.cadastral.activities']).toHaveLength(1);
+    expect((mapped['sections.cadastral.activities'] as { numero: string }[])[0].numero).toBe(
+      '00002',
+    );
+    expect(mapped['sections.cadastral.addresses']).toHaveLength(1);
+    expect((mapped['sections.cadastral.addresses'] as { line: string }[])[0].line).toBe(
+      'AV PAULISTA, 1001',
+    );
+    expect(mapped['sections.cadastral.phones']).toHaveLength(2);
+    expect(mapped['sections.cadastral.emails']).toHaveLength(1);
+    expect(mapped['sections.cadastral.vehicles']).toHaveLength(2);
+    expect(mapped['sections.corporateStructure.qsa']).toHaveLength(1);
+    expect((mapped['sections.corporateStructure.qsa'] as { name: string }[])[0].name).toBe(
+      'JOAO SILVA',
+    );
+    expect(
+      (mapped['sections.corporateStructure.qsa'] as { sharePercent: number }[])[0].sharePercent,
+    ).toBe(100);
   });
 
   it('maps BigDataCorp CPF response to cadastral and pldft paths', () => {

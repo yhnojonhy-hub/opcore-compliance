@@ -33,6 +33,7 @@ function normalizeCnpjStatus(status: string | null): string | null {
 const CPF_STATUS_PATH = 'sections.cadastral.cpfStatus';
 const CPF_REGULAR_PATH = 'sections.cadastral.cpfRegular';
 const CNPJ_STATUS_PATH = 'sections.cadastral.cnpjStatus';
+const DECEASED_PATH = 'sections.cadastral.deceased';
 
 export function normalizeCadastralInMapped(mapped: Record<string, unknown>): void {
   const cpfStatus = readString(mapped[CPF_STATUS_PATH]);
@@ -40,6 +41,14 @@ export function normalizeCadastralInMapped(mapped: Record<string, unknown>): voi
     mapped[CPF_STATUS_PATH] = cpfStatus.toUpperCase();
     if (mapped[CPF_REGULAR_PATH] == null) {
       mapped[CPF_REGULAR_PATH] = inferCpfRegular(cpfStatus);
+    }
+  }
+
+  const deceased = readBoolean(mapped[DECEASED_PATH]);
+  if (deceased != null) {
+    mapped[DECEASED_PATH] = deceased;
+    if (deceased) {
+      mapped[CPF_REGULAR_PATH] = false;
     }
   }
 

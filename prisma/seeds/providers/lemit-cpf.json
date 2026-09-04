@@ -2,22 +2,47 @@
   "slug": "lemit-cpf",
   "name": "Lemit — CPF",
   "baseUrl": "https://api.lemit.com.br",
-  "httpMethod": "GET",
+  "httpMethod": "POST",
   "requestTemplate": {
-    "path": "/api/v1/consulta/{{document}}",
+    "path": "/api/v1/consulta/pessoa",
     "headers": {
       "Accept": "application/json",
-      "User-Agent": "OpCore-Compliance/1.0 (homolog)"
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": "OpCore-Compliance/1.0"
+    },
+    "body": {
+      "documento": "{{document}}"
     }
   },
   "authType": "bearer",
   "authConfigRef": "LEMIT_API_TOKEN",
   "fieldMappings": [
-    { "source": "$.nome", "target": "sections.cadastral.fullName" },
-    { "source": "$.situacao_cadastral", "target": "sections.cadastral.cpfStatus" },
-    { "source": "$.data_nascimento", "target": "sections.cadastral.birthDate" },
-    { "source": "$.nome_mae", "target": "sections.cadastral.motherName" },
-    { "source": "$.protestos", "target": "sections.financial.protests" }
+    { "source": "$.pessoa.nome", "target": "sections.cadastral.fullName" },
+    { "source": "$.pessoa.situacao_cpf", "target": "sections.cadastral.cpfStatus" },
+    { "source": "$.pessoa.data_nascimento", "target": "sections.cadastral.birthDate" },
+    { "source": "$.pessoa.nome_mae", "target": "sections.cadastral.motherName" },
+    { "source": "$.pessoa.sexo", "target": "sections.cadastral.gender" },
+    { "source": "$.pessoa.falecido", "target": "sections.cadastral.deceased" },
+    { "source": "$.pessoa.ocupacao", "target": "sections.cadastral.occupation" },
+    { "source": "$.pessoa.celulares", "target": "sections.cadastral.mobilePhones" },
+    { "source": "$.pessoa.fixos", "target": "sections.cadastral.landlinePhones" },
+    { "source": "$.pessoa.emails", "target": "sections.cadastral.emails" },
+    { "source": "$.pessoa.enderecos", "target": "sections.cadastral.addresses" },
+    { "source": "$.pessoa.carros", "target": "sections.cadastral.vehicles" },
+    { "source": "$.pessoa.vinculos", "target": "sections.corporateLinks.relatedPeople" },
+    {
+      "source": "$.pessoa.participacao_societaria",
+      "target": "sections.corporateLinks.shareholdings"
+    },
+    { "source": "$.pessoa.renda", "target": "sections.financial.estimatedIncome" },
+    {
+      "source": "$.pessoa.risco_credito.score_credito",
+      "target": "sections.financial.creditFlags"
+    },
+    {
+      "source": "$.pessoa.risco_credito.score_credito",
+      "target": "sections.financial.financialRiskLevel"
+    }
   ],
   "supportedTypes": ["CPF"],
   "isActive": true,

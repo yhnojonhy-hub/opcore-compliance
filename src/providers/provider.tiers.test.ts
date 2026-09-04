@@ -33,7 +33,11 @@ function lemitProvider(): Provider {
     id: 'lemit',
     slug: 'lemit-cpf',
     name: 'Lemit',
-    requestTemplate: { path: '/api/v1/consulta/{{document}}' },
+    requestTemplate: {
+      path: '/api/v1/consulta/pessoa',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: { documento: '{{document}}' },
+    },
     priority: 20,
     supportedTypes: ['CPF'],
   };

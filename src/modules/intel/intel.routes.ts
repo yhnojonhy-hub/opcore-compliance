@@ -24,6 +24,7 @@ const createBodySchema = z.object({
   tenantId: z.string().optional(),
   includeBureau: z.boolean().optional(),
   forceRefresh: z.boolean().optional(),
+  async: z.boolean().optional(),
 });
 
 export function registerIntelRoutes(app: Express) {
@@ -40,7 +41,7 @@ export function registerIntelRoutes(app: Express) {
         legalBasis: parsed.data.legalBasis as CreateIntelDossierInput['legalBasis'],
         requestedBy: (req as AuthedRequest).auth?.sub,
       });
-      res.status(201).json(result);
+      res.status(parsed.data.async ? 202 : 201).json(result);
     } catch (e) {
       res.status(422).json({ error: (e as Error).message });
     }
@@ -88,8 +89,11 @@ export function registerIntelRoutes(app: Express) {
 
   app.post('/v1/intel-dossiers/:id/regenerate', requireJwt, async (req, res) => {
     try {
-      const result = await regenerateIntelDossier(req.params.id, (req as AuthedRequest).auth?.sub);
-      res.json(result);
+      const asyncMode = req.body?.async === true || req.query.async === '1';
+      const result = await regenerateIntelDossier(req.params.id, (req as AuthedRequest).auth?.sub, {
+        async: asyncMode,
+      });
+      res.status(asyncMode ? 202 : 200).json(result);
     } catch (e) {
       const message = (e as Error).message;
       res.status(message.includes('não encontrado') ? 404 : 422).json({ error: message });

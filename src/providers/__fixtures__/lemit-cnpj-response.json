@@ -1,14 +1,84 @@
 {
-  "razao_social": "OPEN KNOWLEDGE BRASIL",
-  "nome_fantasia": "REDE PELO CONHECIMENTO LIVRE",
-  "situacao_cadastral": "ATIVA",
-  "protestos": [
-    {
-      "cartorio": "2º Tabelionato de Protestos",
-      "valor": 3200.5,
-      "data": "2023-11-22",
-      "cidade": "São Paulo",
-      "uf": "SP"
-    }
-  ]
+  "data_consulta": "2026-09-02T16:19:40-03:00",
+  "empresa": {
+    "cnpj": "00111222000100",
+    "razao_social": "EMPRESA EXEMPLO LTDA ME",
+    "data_fundacao": "2001-02-03T00:00:00-03:00",
+    "nome_fantasia": "EMPRESA EXEMPLO",
+    "tipo": "ME",
+    "situacao": "ATIVA",
+    "cnae": {
+      "numero": "00001",
+      "tipo": "SERVICO",
+      "segmento": "00000101",
+      "descricao": "SERVICOS DE EXEMPLOS DE EMPRESAS"
+    },
+    "cnaes_secundarios": [
+      {
+        "numero": "00002",
+        "tipo": "COMERCIO",
+        "descricao": "COMERCIO VAREJISTA DE EXEMPLOS"
+      }
+    ],
+    "endereco": {
+      "endereco": "AV PAULISTA, 1001",
+      "bairro": "BELA VISTA",
+      "cidade": "SAO PAULO",
+      "uf": "SP",
+      "cep": "01311000",
+      "tipo": "comercial",
+      "ranking": 1
+    },
+    "celulares": [
+      {
+        "ddd": 11,
+        "numero": "999990000",
+        "plus": true,
+        "ranking": 1
+      },
+      {
+        "ddd": 11,
+        "numero": "900000000",
+        "plus": false,
+        "ranking": 2
+      }
+    ],
+    "fixos": [],
+    "emails": [
+      {
+        "email": "joao.silva@example.com",
+        "ranking": 1
+      }
+    ],
+    "socios": [
+      {
+        "cpf": "00011122233300",
+        "nome": "JOAO SILVA",
+        "participacao": 100,
+        "capital_social": 1000
+      }
+    ],
+    "carros": [
+      {
+        "placa": "ABC99999",
+        "marca": "PEUGEOT/206 SOLEIL",
+        "ano_fabricacao": 2007,
+        "ano_modelo": 2008,
+        "renavan": "123456789",
+        "chassi": "AA00BBB22C3333333",
+        "data_licenciamento": "2019-05-01T00:00:00-02:00",
+        "ranking": 1
+      },
+      {
+        "placa": "ZZZ99999",
+        "marca": "VW/GOL",
+        "ano_fabricacao": 2007,
+        "ano_modelo": 2008,
+        "renavan": "123456789",
+        "chassi": "AA00BBB22C3333333",
+        "data_licenciamento": "2017-01-01T00:00:00-02:00",
+        "ranking": 2
+      }
+    ]
+  }
 }

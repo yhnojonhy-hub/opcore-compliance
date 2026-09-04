@@ -1,15 +1,95 @@
 {
-  "nome": "FULANO DE TAL SILVA",
-  "situacao_cadastral": "REGULAR",
-  "data_nascimento": "1990-05-15",
-  "nome_mae": "MARIA DA SILVA",
-  "protestos": [
-    {
-      "cartorio": "1º Tabelionato de Protestos",
-      "valor": 1500.0,
-      "data": "2024-01-10",
-      "cidade": "São Paulo",
-      "uf": "SP"
-    }
-  ]
+  "data_consulta": "2026-09-02T16:19:40-03:00",
+  "pessoa": {
+    "cpf": "00011122233300",
+    "nome": "JOAO SILVA",
+    "data_nascimento": "1970-10-01T00:00:00-03:00",
+    "sexo": "M",
+    "nome_mae": "MARIA SILVA",
+    "falecido": false,
+    "situacao_cpf": "REGULAR",
+    "renda": 788,
+    "ocupacao": null,
+    "celulares": [
+      {
+        "ddd": 11,
+        "numero": "999990000",
+        "plus": true,
+        "ranking": 1,
+        "whatsapp": true
+      },
+      {
+        "ddd": 11,
+        "numero": "900000000",
+        "plus": false,
+        "ranking": 2,
+        "whatsapp": false
+      }
+    ],
+    "fixos": [],
+    "emails": [
+      {
+        "email": "joao.silva@example.com",
+        "ranking": 1,
+        "possui_cookie": true
+      }
+    ],
+    "enderecos": [
+      {
+        "endereco": "AV PAULISTA, 1001",
+        "bairro": "BELA VISTA",
+        "cidade": "SAO PAULO",
+        "uf": "SP",
+        "cep": "01311000",
+        "tipo": "comercial",
+        "ranking": 1
+      }
+    ],
+    "carros": [
+      {
+        "placa": "ZZZ99999",
+        "marca": "VW/GOL",
+        "ano_fabricacao": 2007,
+        "ano_modelo": 2008,
+        "renavan": "123456789",
+        "chassi": "AA00BBB22C3333333",
+        "data_licenciamento": "2017-01-01T00:00:00-02:00",
+        "ranking": 1
+      }
+    ],
+    "vinculos": [
+      {
+        "cpf_vinculo": "88877766655",
+        "nome_vinculo": "JESSICA SILVA",
+        "tipo_vinculo": "MAE"
+      },
+      {
+        "cpf_vinculo": "99988877766",
+        "nome_vinculo": "MARIA SILVA",
+        "tipo_vinculo": "AVO"
+      }
+    ],
+    "risco_credito": {
+      "cpf_cnpj": "00011122233300",
+      "score_credito": "BAIXISSIMO RISCO"
+    },
+    "participacao_societaria": [
+      {
+        "nome": "EMPRESA A LTDA",
+        "cnpj": "00999999000199",
+        "capital_social": 10000,
+        "participacao_socio": 50,
+        "data_fundacao": "1998-08-04T00:00:00-03:00",
+        "situacao_cadastral": "INAPTA"
+      },
+      {
+        "nome": "EMPRESA B LTDA",
+        "cnpj": "00999999000299",
+        "capital_social": 50000,
+        "participacao_socio": 95,
+        "data_fundacao": "1998-01-28T00:00:00-02:00",
+        "situacao_cadastral": "APTA"
+      }
+    ]
+  }
 }

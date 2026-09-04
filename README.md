@@ -239,10 +239,11 @@ Requer `LEMIT_API_TOKEN` no `.env`. Use slug explícito (`lemit-cpf` / `lemit-cn
 
 ```bash
 # Teste direto na API Lemit (validar token/endpoint com o fornecedor)
-curl -s "https://api.lemit.com.br/api/v1/consulta/10723555079" \
+curl -s 'https://api.lemit.com.br/api/v1/consulta/pessoa' \
+  -X POST \
   -H "Authorization: Bearer $LEMIT_API_TOKEN" \
-  -H "Accept: application/json" \
-  -H "User-Agent: OpCore-Compliance/1.0 (homolog)"
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data 'documento=10723555079'
 
 # Via OpCore
 curl -s -X POST http://localhost:3010/v1/compliance/consult \
@@ -251,7 +252,7 @@ curl -s -X POST http://localhost:3010/v1/compliance/consult \
   -d '{"document":"10723555079","documentType":"CPF","providerSlug":"lemit-cpf"}' | jq .
 ```
 
-Skill: `.cursor/skills/opcore-compliance-lemit/SKILL.md`
+Skill: `.cursor/skills/opcore-compliance-lemit/SKILL.md` · Contrato: [docs/LEMIT.md](../docs/LEMIT.md)
 
 ## Estrutura
 

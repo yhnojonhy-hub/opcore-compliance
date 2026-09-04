@@ -24,9 +24,11 @@ export async function executeProvider(provider: Provider, ctx: ConsultContext): 
   );
   const url = buildUrl(provider.baseUrl, requestTemplate);
   const rawHeaders = (requestTemplate.headers as Record<string, string>) ?? {};
+  const resolvedHeaders =
+    provider.authType === 'env_headers' ? resolveEnvHeaders(rawHeaders) : rawHeaders;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(provider.authType === 'env_headers' ? resolveEnvHeaders(rawHeaders) : rawHeaders),
+    ...resolvedHeaders,
   };
 
   applyAuth(provider, headers);
@@ -34,7 +36,7 @@ export async function executeProvider(provider: Provider, ctx: ConsultContext): 
   const init: RequestInit = { method: provider.httpMethod, headers };
 
   if (provider.httpMethod !== 'GET' && requestTemplate.body) {
-    init.body = JSON.stringify(requestTemplate.body);
+    init.body = encodeRequestBody(requestTemplate.body, headers['Content-Type']);
   }
 
   const response = await fetch(url, init);
@@ -53,9 +55,26 @@ export async function executeProvider(provider: Provider, ctx: ConsultContext): 
   if (contentType.includes('application/json')) {
     const json = await response.json();
     assertNoUpstreamStatusErrors(json, provider.slug);
+    assertNoErrorEnvelope(json, provider.slug);
     return json;
   }
   return { raw: await response.text() };
+}
+
+function isFormUrlEncoded(contentType: string | undefined): boolean {
+  return (contentType ?? '').toLowerCase().includes('application/x-www-form-urlencoded');
+}
+
+function encodeRequestBody(body: unknown, contentType: string | undefined): string {
+  if (isFormUrlEncoded(contentType) && body && typeof body === 'object' && !Array.isArray(body)) {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(body as Record<string, unknown>)) {
+      if (value === undefined || value === null) continue;
+      params.set(key, String(value));
+    }
+    return params.toString();
+  }
+  return JSON.stringify(body);
 }
 
 function buildUrl(baseUrl: string, template: Record<string, unknown>): string {
@@ -108,6 +127,29 @@ function applyAuth(provider: Provider, headers: Record<string, string>) {
     const headerName = headers['X-Api-Key-Header'] ?? 'X-API-Key';
     headers[headerName] = token;
   }
+}
+
+function assertNoErrorEnvelope(payload: unknown, slug: string): void {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return;
+  const obj = payload as Record<string, unknown>;
+  const errorMsg = typeof obj.error === 'string' ? obj.error.trim() : '';
+  if (!errorMsg) return;
+
+  const hasUsefulData =
+    obj.pessoa != null ||
+    obj.empresa != null ||
+    obj.Result != null ||
+    obj.data != null ||
+    obj.sections != null;
+  if (hasUsefulData) return;
+
+  const unauthorized = /nao autorizado|não autorizado|unauthorized|forbidden/i.test(errorMsg);
+  throw new ProviderHttpError(
+    `Provedor ${slug}: ${errorMsg}`,
+    slug,
+    unauthorized ? 401 : 502,
+    JSON.stringify(payload),
+  );
 }
 
 function assertNoUpstreamStatusErrors(payload: unknown, slug: string): void {

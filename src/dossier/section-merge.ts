@@ -16,6 +16,15 @@ export function isBigDataCorpSlug(slug: string | undefined | null): boolean {
   return Boolean(slug?.toLowerCase().startsWith('bigdatacorp'));
 }
 
+export function isLemitSlug(slug: string | undefined | null): boolean {
+  return Boolean(slug?.toLowerCase().startsWith('lemit'));
+}
+
+/** Paid bureau sources (BDC + Lemit) used for reliability / merge precedence. */
+export function isPaidBureauSlug(slug: string | undefined | null): boolean {
+  return isBigDataCorpSlug(slug) || isLemitSlug(slug);
+}
+
 function itemKey(item: unknown): string {
   if (item === null || item === undefined) return String(item);
   if (typeof item !== 'object') return JSON.stringify(item);

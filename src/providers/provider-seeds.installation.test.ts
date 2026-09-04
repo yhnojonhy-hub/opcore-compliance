@@ -80,6 +80,23 @@ describe('provider seeds installation', () => {
         expect(parsed.requestTemplate.path).toContain('{{document}}');
       }
 
+      if (
+        parsed.httpMethod === 'POST' &&
+        parsed.authType !== 'mock' &&
+        !isOsintSeed(slug) &&
+        !isCatalogSeed(slug)
+      ) {
+        const body = parsed.requestTemplate.body as Record<string, unknown> | undefined;
+        const bodyHasDocument =
+          body != null &&
+          Object.values(body).some((v) => typeof v === 'string' && v.includes('{{document}}'));
+        const pathHasDocument = parsed.requestTemplate.path?.includes('{{document}}') ?? false;
+        expect(
+          bodyHasDocument || pathHasDocument,
+          `${slug} POST must include {{document}} in path or body`,
+        ).toBe(true);
+      }
+
       if (isOsintSeed(slug)) {
         expect(parsed.requestTemplate._providerMeta?.adapterRef).toBe(slug);
         expect(parsed.requestTemplate._providerMeta?.outputMode).toBe('findings');

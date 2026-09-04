@@ -1,4 +1,16 @@
-import type { Lawsuit, Protest, RestrictiveListHit, SanctionHit, UboNode } from './shared.types.js';
+import type {
+  Address,
+  EmailContact,
+  Lawsuit,
+  Phone,
+  Protest,
+  RelatedPerson,
+  RestrictiveListHit,
+  SanctionHit,
+  Shareholding,
+  UboNode,
+  Vehicle,
+} from './shared.types.js';
 
 export interface PfCadastral {
   fullName: string | null;
@@ -6,6 +18,16 @@ export interface PfCadastral {
   motherName: string | null;
   cpfStatus: string | null;
   cpfRegular: boolean | null;
+  gender?: string | null;
+  deceased?: boolean | null;
+  occupation?: string | null;
+  phones?: Phone[];
+  emails?: EmailContact[];
+  addresses?: Address[];
+  vehicles?: Vehicle[];
+  /** Transient mapping keys — merged into phones by normalizer */
+  mobilePhones?: unknown;
+  landlinePhones?: unknown;
 }
 
 export interface PfPldft {
@@ -28,6 +50,7 @@ export interface PfFinancial {
   federalDebt: number | null;
   protests: Protest[];
   creditFlags: string[];
+  estimatedIncome?: number | null;
   totalAssets?: string | null;
   estimatedIncomeRange?: string | null;
   incomeEstimates?: Record<string, string> | null;
@@ -45,9 +68,10 @@ export interface PfEsg {
 }
 
 export interface PfCorporateLinks {
-  shareholdings: Record<string, unknown>[];
+  shareholdings: Shareholding[];
   companies: Record<string, unknown>[];
   powersOfAttorney: Record<string, unknown>[];
+  relatedPeople?: RelatedPerson[];
 }
 
 export interface PfSubject {

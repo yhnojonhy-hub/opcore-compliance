@@ -288,7 +288,7 @@ export async function createIntelDossier(
     },
   });
 
-  const { pillars } = await runFourPillarPipeline({
+  const pipelineInput = {
     dossierId: dossier.id,
     target,
     targetType: input.targetType,
@@ -298,11 +298,47 @@ export async function createIntelDossier(
     paidProviders: input.paidProviders,
     includeBureau: input.includeBureau,
     existingPartyName: input.partyName,
-  });
+  };
 
+  if (input.async) {
+    void runPipelineAndFinalize(pipelineInput).catch(async (error) => {
+      await prisma.intelDossier.update({
+        where: { id: dossier.id },
+        data: {
+          status: 'FAILED',
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+    });
+    const pending = await loadDossier(dossier.id);
+    if (!pending) throw new Error('Dossiê intel não encontrado após criação');
+    return mapDossier(pending, {
+      pillars: derivePillarsFromSources(pending.sources, pending.findings),
+      canonical: null,
+    });
+  }
+
+  const { pillars } = await runFourPillarPipeline(pipelineInput);
   const full = await loadDossier(dossier.id);
   if (!full) throw new Error('Dossiê intel não encontrado após criação');
   return attachFullReport(full, pillars, { persistCanonical: true });
+}
+
+async function runPipelineAndFinalize(params: {
+  dossierId: string;
+  target: string;
+  targetType: TargetType;
+  requestedBy?: string;
+  forceRefresh?: boolean;
+  deepSearch?: boolean;
+  paidProviders?: string[];
+  includeBureau?: boolean;
+  existingPartyName?: string | null;
+}): Promise<void> {
+  const { pillars } = await runFourPillarPipeline(params);
+  const full = await loadDossier(params.dossierId);
+  if (!full) return;
+  await attachFullReport(full, pillars, { persistCanonical: true });
 }
 
 export async function getIntelDossier(id: string): Promise<IntelDossierResponse | null> {
@@ -355,6 +391,7 @@ export async function listIntelDossiers(params: {
 export async function regenerateIntelDossier(
   id: string,
   requestedBy?: string,
+  options?: { async?: boolean },
 ): Promise<IntelDossierResponse> {
   const existing = await prisma.intelDossier.findUnique({ where: { id } });
   if (!existing) throw new Error('Dossiê intel não encontrado');
@@ -369,7 +406,7 @@ export async function regenerateIntelDossier(
     data: { dossierId: id, action: 'regenerated', actor: requestedBy },
   });
 
-  const { pillars } = await runFourPillarPipeline({
+  const pipelineInput = {
     dossierId: id,
     target: existing.target,
     targetType: existing.targetType as TargetType,
@@ -378,8 +415,27 @@ export async function regenerateIntelDossier(
     deepSearch: existing.deepSearch,
     includeBureau: true,
     existingPartyName: existing.partyName,
-  });
+  };
 
+  if (options?.async) {
+    void runPipelineAndFinalize(pipelineInput).catch(async (error) => {
+      await prisma.intelDossier.update({
+        where: { id },
+        data: {
+          status: 'FAILED',
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+    });
+    const pending = await loadDossier(id);
+    if (!pending) throw new Error('Dossiê intel não encontrado após regeneração');
+    return mapDossier(pending, {
+      pillars: derivePillarsFromSources(pending.sources, pending.findings),
+      canonical: null,
+    });
+  }
+
+  const { pillars } = await runFourPillarPipeline(pipelineInput);
   const full = await loadDossier(id);
   if (!full) throw new Error('Dossiê intel não encontrado após regeneração');
   return attachFullReport(full, pillars, { persistCanonical: true });

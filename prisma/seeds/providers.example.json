@@ -20,25 +20,50 @@
     "priority": 10
   },
   {
-    "slug": "lemit",
-    "name": "Lemit",
+    "slug": "lemit-cpf",
+    "name": "Lemit — CPF",
     "baseUrl": "https://api.lemit.com.br",
-    "httpMethod": "GET",
+    "httpMethod": "POST",
     "requestTemplate": {
-      "path": "/api/v1/consulta/{{document}}",
+      "path": "/api/v1/consulta/pessoa",
       "headers": {
         "Accept": "application/json",
-        "User-Agent": "OpCore-Compliance/1.0 (homolog)"
-      }
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "OpCore-Compliance/1.0"
+      },
+      "body": { "documento": "{{document}}" }
     },
     "authType": "bearer",
     "authConfigRef": "LEMIT_API_TOKEN",
     "fieldMappings": [
-      { "source": "$.nome", "target": "sections.cadastral.fullName" },
-      { "source": "$.situacao_cadastral", "target": "sections.cadastral.cpfStatus" },
-      { "source": "$.protestos", "target": "sections.financial.protests" }
+      { "source": "$.pessoa.nome", "target": "sections.cadastral.fullName" },
+      { "source": "$.pessoa.situacao_cpf", "target": "sections.cadastral.cpfStatus" }
     ],
-    "supportedTypes": ["CPF", "CNPJ"],
+    "supportedTypes": ["CPF"],
+    "isActive": false,
+    "priority": 20
+  },
+  {
+    "slug": "lemit-cnpj",
+    "name": "Lemit — CNPJ",
+    "baseUrl": "https://api.lemit.com.br",
+    "httpMethod": "POST",
+    "requestTemplate": {
+      "path": "/api/v1/consulta/empresa",
+      "headers": {
+        "Accept": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "OpCore-Compliance/1.0"
+      },
+      "body": { "documento": "{{document}}" }
+    },
+    "authType": "bearer",
+    "authConfigRef": "LEMIT_API_TOKEN",
+    "fieldMappings": [
+      { "source": "$.empresa.razao_social", "target": "sections.cadastral.legalName" },
+      { "source": "$.empresa.situacao", "target": "sections.cadastral.cnpjStatus" }
+    ],
+    "supportedTypes": ["CNPJ"],
     "isActive": false,
     "priority": 20
   },
