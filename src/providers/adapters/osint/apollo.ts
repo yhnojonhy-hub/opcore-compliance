@@ -207,10 +207,6 @@ export function mapApolloPerson(raw: Record<string, unknown>): ApolloPersonMappe
   const id = asText(raw.id);
   if (!id) return null;
   const org = asRecord(raw.organization);
-  const phones = Array.isArray(raw.phone_numbers) ? raw.phone_numbers : [];
-  const firstPhone = phones.find((p) => p && typeof p === 'object') as
-    | Record<string, unknown>
-    | undefined;
   const name =
     asText(raw.name) || [asText(raw.first_name), asText(raw.last_name)].filter(Boolean).join(' ');
   if (!name) return null;
@@ -222,11 +218,8 @@ export function mapApolloPerson(raw: Record<string, unknown>): ApolloPersonMappe
     title: asText(raw.title) || undefined,
     email: asText(raw.email) || undefined,
     emailStatus: asText(raw.email_status) || undefined,
-    phone:
-      asText(firstPhone?.sanitized_number) ||
-      asText(firstPhone?.raw_number) ||
-      asText(raw.phone) ||
-      undefined,
+    // RF11: phones come from Lemit, never Apollo reveal / incidental match numbers
+    phone: undefined,
     linkedinUrl: asText(raw.linkedin_url) || undefined,
     city: asText(raw.city) || undefined,
     state: asText(raw.state) || undefined,
@@ -240,9 +233,6 @@ function personFindings(person: ApolloPersonMapped): ProviderFinding[] {
   const findings: ProviderFinding[] = [];
   const location = [person.city, person.state, person.country].filter(Boolean).join(', ');
   const emails = person.email ? [{ email: person.email, ranking: 1, hasCookie: null }] : [];
-  const phones = person.phone
-    ? [{ number: person.phone, ddd: null, type: null, ranking: 1, whatsapp: null, plus: null }]
-    : [];
 
   findings.push({
     category: 'IDENTITY',
@@ -251,7 +241,6 @@ function personFindings(person: ApolloPersonMapped): ProviderFinding[] {
       person.title,
       person.organizationName,
       person.email ? `e-mail ${person.email}` : null,
-      person.phone ? `tel ${person.phone}` : null,
       location || null,
     ]
       .filter(Boolean)
@@ -262,9 +251,7 @@ function personFindings(person: ApolloPersonMapped): ProviderFinding[] {
       title: person.title ?? null,
       email: person.email ?? null,
       emailStatus: person.emailStatus ?? null,
-      phone: person.phone ?? null,
       emails,
-      phones,
       organizationName: person.organizationName ?? null,
       organizationDomain: person.organizationDomain ?? null,
       city: person.city ?? null,
@@ -350,11 +337,6 @@ function maxMatchesFromEnv(): number {
   return Math.min(Math.floor(raw), 25);
 }
 
-function revealPhonesFromEnv(): boolean {
-  const raw = getEnv().APOLLO_REVEAL_PHONES.trim().toLowerCase();
-  return raw === '1' || raw === 'true' || raw === 'yes';
-}
-
 export const apollo: DossierProvider = {
   name: 'Apollo.io',
   category: 'IDENTITY',
@@ -379,7 +361,6 @@ export const apollo: DossierProvider = {
       return skipped('Sem nome/e-mail para enriquecer no Apollo');
     }
 
-    const revealPhones = revealPhonesFromEnv();
     const findings: ProviderFinding[] = [];
     const rawPayloads: unknown[] = [];
     let httpStatus = 200;
@@ -425,7 +406,7 @@ export const apollo: DossierProvider = {
     const matchResults = await mapLimit(seeds, 2, async (seed) => {
       const body: Record<string, unknown> = {
         reveal_personal_emails: true,
-        reveal_phone_number: revealPhones,
+        reveal_phone_number: false, // RF11: phones from Lemit, never Apollo reveal
       };
       if (seed.name) body.name = seed.name;
       if (seed.email) body.email = seed.email;

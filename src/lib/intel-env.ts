@@ -42,6 +42,7 @@ export function getEnv(): IntelEnv {
     APIFY_API_TOKEN: process.env.APIFY_API_TOKEN?.trim() ?? '',
     APOLLO_API_KEY: process.env.APOLLO_API_KEY?.trim() ?? '',
     APOLLO_MAX_MATCHES: Number.isFinite(maxMatches) && maxMatches > 0 ? Math.floor(maxMatches) : 8,
+    // Kept for env compatibility. Adapter never reveals phones (RF11 — Lemit).
     APOLLO_REVEAL_PHONES: process.env.APOLLO_REVEAL_PHONES?.trim() ?? 'false',
     INTERPOL_API_BASE:
       process.env.INTERPOL_API_BASE?.trim() || 'https://ws-public.interpol.int/notices/v1',

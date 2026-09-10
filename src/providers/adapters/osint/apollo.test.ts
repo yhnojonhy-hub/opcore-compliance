@@ -95,6 +95,7 @@ describe('mapApolloPerson', () => {
       organizationName: 'INDEX CORE',
       linkedinUrl: 'https://www.linkedin.com/in/mariasilva',
     });
+    expect(person?.phone).toBeUndefined();
   });
 });
 
@@ -145,6 +146,7 @@ describe('apollo adapter', () => {
   it('maps people/match fixture into IDENTITY and SOCIAL_PRESENCE findings', async () => {
     process.env.APOLLO_API_KEY = 'test-key';
     process.env.APOLLO_MAX_MATCHES = '2';
+    process.env.APOLLO_REVEAL_PHONES = 'true';
     resetIntelEnvCache();
 
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
@@ -188,6 +190,14 @@ describe('apollo adapter', () => {
       String(call[0]).includes('/people/match'),
     );
     expect(matchCalls.length).toBeLessThanOrEqual(2);
+    const matchInit = matchCalls[0]?.[1] as RequestInit | undefined;
+    const matchBody = JSON.parse(String(matchInit?.body ?? '{}')) as {
+      reveal_phone_number?: boolean;
+    };
+    expect(matchBody.reveal_phone_number).toBe(false);
+    const identity = result.findings.find((f) => f.category === 'IDENTITY' && f.title === 'Maria Silva');
+    expect(identity?.details.phones).toBeUndefined();
+    expect(identity?.details.phone).toBeUndefined();
   });
 
   it('emits CHECKED_ABSENT when Apollo returns no person', async () => {
