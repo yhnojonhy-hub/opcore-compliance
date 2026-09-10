@@ -24,6 +24,7 @@ const BASE_URLS: Record<string, string> = {
   'osint-nominatim': 'https://nominatim.openstreetmap.org',
   'osint-disify': 'https://www.disify.com',
   'osint-hunter-io': 'https://api.hunter.io',
+  'osint-apollo-io': 'https://api.apollo.io',
   'osint-libphonenumber': 'https://local',
   'osint-veriphone': 'https://api.veriphone.io',
   'osint-ofac-sdn': 'https://sanctionslistservice.ofac.treas.gov',

@@ -15,7 +15,10 @@
   "authType": "none",
   "authConfigRef": null,
   "fieldMappings": [],
-  "supportedTypes": ["NAME", "CNPJ"],
+  "supportedTypes": [
+    "NAME",
+    "CNPJ"
+  ],
   "isActive": true,
   "priority": 150
 }

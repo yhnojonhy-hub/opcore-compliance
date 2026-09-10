@@ -10,6 +10,8 @@ const {
   mockSourceCount,
   mockFindingCount,
   mockAuditCreate,
+  mockFindUnique,
+  mockApolloRun,
 } = vi.hoisted(() => ({
   mockConsultAll: vi.fn(),
   mockRunIntelSearch: vi.fn(),
@@ -19,6 +21,8 @@ const {
   mockSourceCount: vi.fn(),
   mockFindingCount: vi.fn(),
   mockAuditCreate: vi.fn(),
+  mockFindUnique: vi.fn(),
+  mockApolloRun: vi.fn(),
 }));
 
 vi.mock('../compliance/compliance.orchestrator.js', () => ({
@@ -29,9 +33,24 @@ vi.mock('./intel.orchestrator.js', () => ({
   runIntelSearch: (...args: unknown[]) => mockRunIntelSearch(...args),
 }));
 
+vi.mock('../../providers/adapters/osint/apollo.js', () => ({
+  apollo: {
+    name: 'Apollo.io',
+    category: 'IDENTITY',
+    reliability: 'PAID',
+    accepts: ['CPF', 'CNPJ', 'NAME', 'EMAIL'],
+    phase: 'sync',
+    rateMs: 0,
+    run: (...args: unknown[]) => mockApolloRun(...args),
+  },
+}));
+
 vi.mock('../../db/prisma.js', () => ({
   prisma: {
-    intelDossier: { update: (...args: unknown[]) => mockUpdate(...args) },
+    intelDossier: {
+      update: (...args: unknown[]) => mockUpdate(...args),
+      findUnique: (...args: unknown[]) => mockFindUnique(...args),
+    },
     intelDossierSource: {
       create: (...args: unknown[]) => mockSourceCreate(...args),
       count: (...args: unknown[]) => mockSourceCount(...args),
@@ -46,7 +65,7 @@ vi.mock('../../db/prisma.js', () => ({
   },
 }));
 
-import { runFourPillarPipeline } from './four-pillar.pipeline.js';
+import { derivePillarsFromSources, runFourPillarPipeline } from './four-pillar.pipeline.js';
 
 describe('runFourPillarPipeline', () => {
   beforeEach(() => {
@@ -58,9 +77,14 @@ describe('runFourPillarPipeline', () => {
     mockFindingCount.mockResolvedValue(0);
     mockAuditCreate.mockResolvedValue({});
     mockRunIntelSearch.mockResolvedValue(undefined);
+    mockFindUnique.mockResolvedValue({
+      partyName: 'JOAO',
+      findings: [],
+    });
+    mockApolloRun.mockResolvedValue({ status: 'skipped', error: 'APOLLO_API_KEY não configurada', findings: [] });
   });
 
-  it('runs BDC then Lemit then BrasilAPI then Extras in order', async () => {
+  it('runs BDC then Lemit then BrasilAPI then Extras then Apollo in order', async () => {
     const order: string[] = [];
     mockConsultAll.mockImplementation(async (args: Record<string, unknown>) => {
       if (args.slugPrefixes) {
@@ -86,6 +110,10 @@ describe('runFourPillarPipeline', () => {
     mockRunIntelSearch.mockImplementation(async () => {
       order.push('extras');
     });
+    mockApolloRun.mockImplementation(async () => {
+      order.push('apollo');
+      return { status: 'skipped', error: 'APOLLO_API_KEY não configurada', findings: [] };
+    });
 
     const result = await runFourPillarPipeline({
       dossierId: 'd1',
@@ -94,8 +122,9 @@ describe('runFourPillarPipeline', () => {
       forceRefresh: true,
     });
 
-    expect(order).toEqual(['bdc', 'lemit', 'brasilapi', 'extras']);
+    expect(order).toEqual(['bdc', 'lemit', 'brasilapi', 'extras', 'apollo']);
     expect(result.pillars.bdc.status).toBe('ok');
+    expect(result.pillars.apollo.status).toBe('skipped');
     expect(result.partyName).toBe('JOAO');
     expect(mockConsultAll.mock.calls[0][0].slugPrefixes).toEqual(['bigdatacorp']);
   });
@@ -142,6 +171,56 @@ describe('runFourPillarPipeline', () => {
     expect(result.pillars.lemit.status).toBe('ok');
     expect(result.pillars.brasilapi.status).toBe('ok');
     expect(result.pillars.extras.status).toBe('ok');
+    expect(result.pillars.apollo.status).toBe('skipped');
+  });
+
+  it('persists Apollo findings after extras', async () => {
+    mockConsultAll.mockImplementation(async (args: Record<string, unknown>) => {
+      if (args.slugPrefixes) {
+        return [
+          {
+            provider: 'bigdatacorp-pf-basic_data',
+            payload: { sections: { cadastral: { fullName: 'JOAO' } } },
+          },
+        ];
+      }
+      if (args.providerSlug === 'lemit-cpf') {
+        return [{ provider: 'lemit-cpf', payload: { sections: {} } }];
+      }
+      return [{ provider: 'brasilapi-cpf', payload: { sections: {} } }];
+    });
+    mockApolloRun.mockResolvedValue({
+      status: 'ok',
+      httpStatus: 200,
+      findings: [
+        {
+          category: 'IDENTITY',
+          title: 'Maria Silva',
+          summary: 'CEO · maria@indexcore.com.br',
+          details: { email: 'maria@indexcore.com.br' },
+          confidence: 88,
+        },
+      ],
+    });
+
+    const result = await runFourPillarPipeline({
+      dossierId: 'd1',
+      target: '37740937843',
+      targetType: 'CPF',
+    });
+
+    expect(result.pillars.apollo.status).toBe('ok');
+    expect(result.pillars.apollo.findingCount).toBe(1);
+    expect(mockSourceCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          name: 'Apollo.io',
+          providerSlug: 'osint-apollo-io',
+          status: 'ok',
+          reliability: 'PAID',
+        }),
+      }),
+    );
   });
 
   it('treats Lemit HTTP 404 as ok with CHECKED_ABSENT finding', async () => {
@@ -214,5 +293,33 @@ describe('runFourPillarPipeline', () => {
     expect(result.pillars.lemit.providerCount).toBe(0);
     expect(result.pillars.lemit.error).toContain('nao autorizado');
     expect(result.pillars.brasilapi.status).toBe('ok');
+  });
+});
+
+describe('derivePillarsFromSources', () => {
+  it('keeps Apollo sources out of extras', () => {
+    const pillars = derivePillarsFromSources(
+      [
+        { name: 'BigDataCorp', status: 'ok' },
+        { name: 'Lemit', status: 'ok' },
+        { name: 'Brasil API', status: 'ok' },
+        { name: 'Hunter.io', status: 'ok' },
+        { name: 'Apollo.io', status: 'ok' },
+      ],
+      [
+        { sourceName: 'BigDataCorp' },
+        { sourceName: 'Lemit' },
+        { sourceName: 'Brasil API' },
+        { sourceName: 'Hunter.io' },
+        { sourceName: 'Apollo.io' },
+        { sourceName: 'Apollo.io' },
+      ],
+    );
+
+    expect(pillars.apollo.status).toBe('ok');
+    expect(pillars.apollo.providerCount).toBe(1);
+    expect(pillars.apollo.findingCount).toBe(2);
+    expect(pillars.extras.providerCount).toBe(1);
+    expect(pillars.extras.findingCount).toBe(1);
   });
 });

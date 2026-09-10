@@ -15,7 +15,10 @@
   "authType": "none",
   "authConfigRef": null,
   "fieldMappings": [],
-  "supportedTypes": ["NAME", "PASSAPORTE"],
+  "supportedTypes": [
+    "NAME",
+    "PASSAPORTE"
+  ],
   "isActive": true,
   "priority": 150
 }

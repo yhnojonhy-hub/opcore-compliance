@@ -1,4 +1,4 @@
-import type { TargetType } from '../../contracts/enums/intel.enums.js';
+import type { FindingCategory, TargetType } from '../../contracts/enums/intel.enums.js';
 import type { ConsultResult } from '../compliance/compliance.service.js';
 import { consultAllForDocument } from '../compliance/compliance.orchestrator.js';
 import { runIntelSearch } from './intel.orchestrator.js';
@@ -9,10 +9,12 @@ import {
 } from '../../dossier/bureau-findings.js';
 import { isPaidBureauSlug } from '../../dossier/section-merge.js';
 import { ProviderHttpError } from '../../providers/provider.errors.js';
+import { apollo } from '../../providers/adapters/osint/apollo.js';
+import { slugForProvider } from '../../providers/adapters/registry.js';
 import { prisma } from '../../db/prisma.js';
 import type { Prisma } from '@prisma/client';
 
-export type PillarId = 'bdc' | 'lemit' | 'brasilapi' | 'extras';
+export type PillarId = 'bdc' | 'lemit' | 'brasilapi' | 'extras' | 'apollo';
 
 export interface PillarStatus {
   id: PillarId;
@@ -28,6 +30,7 @@ export interface FourPillarSummary {
   lemit: PillarStatus;
   brasilapi: PillarStatus;
   extras: PillarStatus;
+  apollo: PillarStatus;
 }
 
 function emptyPillar(id: PillarId, label: string): PillarStatus {
@@ -158,9 +161,166 @@ async function persistLemitNotFound(params: {
   return 1;
 }
 
+function toJson(value: unknown): Prisma.InputJsonValue | undefined {
+  if (value === undefined || value === null) return undefined;
+  try {
+    const serialized = JSON.stringify(value);
+    if (serialized.length > 180_000) return { truncated: true, bytes: serialized.length };
+    return JSON.parse(serialized) as Prisma.InputJsonValue;
+  } catch {
+    return undefined;
+  }
+}
+
+const NON_PERSON_TITLE_RE =
+  /contatos|cadastral|consultado|v[ií]nculo|participa[cç][aã]o|quadro societ|nada consta|protesto|san[cç][aã]o|processo/i;
+
+function isPersonLikeName(value: string): boolean {
+  const text = value.trim();
+  if (text.length < 5 || /^\d+$/.test(text)) return false;
+  if (NON_PERSON_TITLE_RE.test(text)) return false;
+  const parts = text.split(/\s+/).filter(Boolean);
+  return parts.length >= 2 && /[A-Za-zÀ-ÿ]/.test(text);
+}
+
+async function runApolloPillar(params: {
+  dossierId: string;
+  target: string;
+  targetType: TargetType;
+  partyName?: string;
+}): Promise<PillarStatus> {
+  const started = Date.now();
+  const dossier = await prisma.intelDossier.findUnique({
+    where: { id: params.dossierId },
+    include: {
+      findings: { select: { category: true, title: true, summary: true, details: true } },
+    },
+  });
+
+  const priorFindings = (dossier?.findings ?? []).map((finding) => ({
+    category: finding.category as FindingCategory,
+    title: finding.title,
+    summary: finding.summary,
+    details:
+      finding.details && typeof finding.details === 'object' && !Array.isArray(finding.details)
+        ? (finding.details as Record<string, unknown>)
+        : {},
+  }));
+
+  const aliases = [
+    ...new Set(
+      [
+        params.partyName,
+        dossier?.partyName,
+        ...priorFindings
+          .filter((f) => f.category === 'IDENTITY')
+          .map((f) => f.title)
+          .filter(isPersonLikeName),
+      ].filter((v): v is string => Boolean(v && v.trim())),
+    ),
+  ].slice(0, 8);
+
+  const ctx = {
+    target: params.target,
+    targetType: params.targetType,
+    partyName: params.partyName ?? dossier?.partyName ?? aliases[0],
+    aliases,
+    deepSearch: false,
+    paidProviders: ['apollo-io'],
+    priorFindings,
+  };
+
+  try {
+    const result = await apollo.run(ctx);
+    await prisma.intelDossierSource.create({
+      data: {
+        dossierId: params.dossierId,
+        name: apollo.name,
+        providerSlug: slugForProvider(apollo.name),
+        category: apollo.category,
+        reliability: apollo.reliability,
+        status: result.status,
+        httpStatus: result.httpStatus,
+        durationMs: Date.now() - started,
+        error: result.error ?? null,
+        rawPayload: toJson(result.rawPayload),
+      },
+    });
+
+    if (result.status === 'skipped') {
+      return {
+        id: 'apollo',
+        label: 'Apollo',
+        status: 'skipped',
+        providerCount: 0,
+        findingCount: 0,
+        error: result.error,
+      };
+    }
+
+    if (result.status === 'error' || result.status === 'rate_limited') {
+      return {
+        id: 'apollo',
+        label: 'Apollo',
+        status: 'error',
+        providerCount: 1,
+        findingCount: 0,
+        error: result.error ?? (result.status === 'rate_limited' ? 'rate limited' : 'erro Apollo'),
+      };
+    }
+
+    if (result.findings.length > 0) {
+      await prisma.intelDossierFinding.createMany({
+        data: result.findings.map((finding) => ({
+          dossierId: params.dossierId,
+          category: finding.category,
+          sourceName: apollo.name,
+          reliability: apollo.reliability,
+          confidence: finding.confidence,
+          title: finding.title,
+          summary: finding.summary,
+          details: (toJson(finding.details) ?? {}) as Prisma.InputJsonValue,
+          url: finding.url,
+          occurredAt: finding.occurredAt,
+          verified: false,
+        })),
+      });
+    }
+
+    return {
+      id: 'apollo',
+      label: 'Apollo',
+      status: 'ok',
+      providerCount: 1,
+      findingCount: result.findings.length,
+    };
+  } catch (error) {
+    await prisma.intelDossierSource.create({
+      data: {
+        dossierId: params.dossierId,
+        name: apollo.name,
+        providerSlug: slugForProvider(apollo.name),
+        category: apollo.category,
+        reliability: apollo.reliability,
+        status: 'error',
+        durationMs: Date.now() - started,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
+    return {
+      id: 'apollo',
+      label: 'Apollo',
+      status: 'error',
+      providerCount: 0,
+      findingCount: 0,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 /**
- * Runs the four dossier pillars in order: BDC → Lemit → BrasilAPI → Extras (OSINT).
- * Report assembly happens only after all four complete.
+ * Runs dossier pillars in order: BDC → Lemit → BrasilAPI → Extras (OSINT) → Apollo.
+ * Report assembly happens only after all pillars complete.
  */
 export async function runFourPillarPipeline(params: {
   dossierId: string;
@@ -178,6 +338,7 @@ export async function runFourPillarPipeline(params: {
     lemit: emptyPillar('lemit', 'Lemit'),
     brasilapi: emptyPillar('brasilapi', 'Brasil API'),
     extras: emptyPillar('extras', 'Extras / OSINT'),
+    apollo: emptyPillar('apollo', 'Apollo'),
   };
 
   let partyName = params.existingPartyName ?? undefined;
@@ -367,6 +528,23 @@ export async function runFourPillarPipeline(params: {
     };
   }
 
+  // 5) Apollo — last pillar; enriches identities found above
+  pillars.apollo = await runApolloPillar({
+    dossierId: params.dossierId,
+    target: params.target,
+    targetType: params.targetType,
+    partyName,
+  });
+
+  // Extras already marks COMPLETED; keep final status after Apollo enrichment
+  await prisma.intelDossier.update({
+    where: { id: params.dossierId },
+    data: {
+      status: pillars.extras.status === 'error' && pillars.apollo.status === 'error' ? 'PARTIAL' : 'COMPLETED',
+      completedAt: new Date(),
+    },
+  });
+
   await prisma.intelDossierAuditLog.create({
     data: {
       dossierId: params.dossierId,
@@ -399,7 +577,8 @@ export function derivePillarsFromSources(
   const bdc = count(['BigDataCorp']);
   const lemit = count(['Lemit']);
   const brasil = count(['Brasil API', 'BrasilAPI']);
-  const known = new Set([...bdc, ...lemit, ...brasil]);
+  const apollo = count(['Apollo']);
+  const known = new Set([...bdc, ...lemit, ...brasil, ...apollo]);
   const extras = sources.filter((s) => !known.has(s));
 
   return {
@@ -434,8 +613,16 @@ export function derivePillarsFromSources(
         findings.length -
           findingCount(['BigDataCorp']) -
           findingCount(['Lemit']) -
-          findingCount(['Brasil']),
+          findingCount(['Brasil']) -
+          findingCount(['Apollo']),
       ),
+    },
+    apollo: {
+      id: 'apollo',
+      label: 'Apollo',
+      status: statusOf(apollo),
+      providerCount: apollo.length,
+      findingCount: findingCount(['Apollo']),
     },
   };
 }

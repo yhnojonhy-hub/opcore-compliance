@@ -1,14 +1,14 @@
 {
-  "slug": "osint-minha-receita",
-  "name": "Minha Receita",
-  "baseUrl": "https://minhareceita.org",
+  "slug": "osint-apollo-io",
+  "name": "Apollo.io",
+  "baseUrl": "https://api.apollo.io",
   "httpMethod": "GET",
   "requestTemplate": {
     "_providerMeta": {
-      "adapterRef": "osint-minha-receita",
+      "adapterRef": "osint-apollo-io",
       "outputMode": "findings",
       "phase": "sync",
-      "reliability": "COMMUNITY",
+      "reliability": "PAID",
       "findingCategory": "IDENTITY"
     }
   },
@@ -16,7 +16,10 @@
   "authConfigRef": null,
   "fieldMappings": [],
   "supportedTypes": [
-    "CNPJ"
+    "CPF",
+    "CNPJ",
+    "NAME",
+    "EMAIL"
   ],
   "isActive": true,
   "priority": 50

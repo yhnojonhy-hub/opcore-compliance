@@ -36,7 +36,7 @@ export interface IntelSource {
 }
 
 export interface IntelPillarStatus {
-  id: 'bdc' | 'lemit' | 'brasilapi' | 'extras';
+  id: 'bdc' | 'lemit' | 'brasilapi' | 'extras' | 'apollo';
   label: string;
   status: 'ok' | 'partial' | 'error' | 'skipped';
   providerCount: number;
@@ -49,6 +49,7 @@ export interface IntelPillarsSummary {
   lemit: IntelPillarStatus;
   brasilapi: IntelPillarStatus;
   extras: IntelPillarStatus;
+  apollo: IntelPillarStatus;
 }
 
 export interface IntelDossierResponse {
@@ -64,7 +65,7 @@ export interface IntelDossierResponse {
   partyName?: string | null;
   findings: IntelFinding[];
   sources: IntelSource[];
-  /** Four-pillar run status (BDC → Lemit → BrasilAPI → Extras). */
+  /** Pillar run status (BDC → Lemit → BrasilAPI → Extras → Apollo). */
   pillars?: IntelPillarsSummary;
   /** Canonical ComplianceDossier with evaluateRisk (full report). */
   canonical?: ComplianceDossier | null;

@@ -129,7 +129,90 @@ function applyCadastralScalar(
       cadastral.cnpjStatus = status.toUpperCase();
   }
 
+  const emailsFromDetails = Array.isArray(details.emails) ? details.emails : [];
+  const singleEmail = readString(details.email);
+  if (emailsFromDetails.length > 0 || singleEmail) {
+    const existing = Array.isArray(cadastral.emails) ? [...cadastral.emails] : [];
+    const seen = new Set(
+      existing
+        .map((item) => {
+          const record = asRecord(item);
+          return readString(record.email)?.toLowerCase();
+        })
+        .filter(Boolean),
+    );
+    for (const item of emailsFromDetails) {
+      const record = asRecord(item);
+      const email = readString(record.email)?.toLowerCase();
+      if (!email || seen.has(email)) continue;
+      seen.add(email);
+      existing.push({ email, ranking: record.ranking ?? null, hasCookie: record.hasCookie ?? null });
+    }
+    if (singleEmail && !seen.has(singleEmail.toLowerCase())) {
+      existing.push({ email: singleEmail, ranking: 1, hasCookie: null });
+    }
+    if (existing.length > 0) cadastral.emails = existing;
+  }
+
+  const phonesFromDetails = Array.isArray(details.phones) ? details.phones : [];
+  const singlePhone = readString(details.phone);
+  if (phonesFromDetails.length > 0 || singlePhone) {
+    const existing = Array.isArray(cadastral.phones) ? [...cadastral.phones] : [];
+    const seen = new Set(
+      existing
+        .map((item) => {
+          const record = asRecord(item);
+          return readString(record.number)?.replace(/\D/g, '');
+        })
+        .filter(Boolean),
+    );
+    for (const item of phonesFromDetails) {
+      const record = asRecord(item);
+      const number = readString(record.number);
+      const digits = number?.replace(/\D/g, '') ?? '';
+      if (!digits || seen.has(digits)) continue;
+      seen.add(digits);
+      existing.push(record);
+    }
+    if (singlePhone) {
+      const digits = singlePhone.replace(/\D/g, '');
+      if (digits && !seen.has(digits)) {
+        existing.push({
+          number: singlePhone,
+          ddd: null,
+          type: null,
+          ranking: 1,
+          whatsapp: null,
+          plus: null,
+        });
+      }
+    }
+    if (existing.length > 0) cadastral.phones = existing;
+  }
+
   sections.cadastral = cadastral;
+}
+
+function applySocialPresence(
+  sections: Record<string, Record<string, unknown>>,
+  finding: IntelFinding,
+): void {
+  if (finding.category !== 'SOCIAL_PRESENCE') return;
+  const details = finding.details ?? {};
+  const linkedinUrl = readString(details.linkedinUrl, finding.url);
+  const organizationName = readString(details.organizationName, details.name);
+  const organizationDomain = readString(details.organizationDomain, details.domain);
+  if (!linkedinUrl && !organizationName) return;
+
+  appendToSectionArray(sections, 'corporateLinks', 'companies', {
+    source: finding.sourceName,
+    name: organizationName ?? finding.title,
+    linkedinUrl: linkedinUrl ?? null,
+    domain: organizationDomain ?? null,
+    title: readString(details.title) ?? null,
+    summary: finding.summary,
+    url: finding.url ?? linkedinUrl ?? null,
+  });
 }
 
 export function findingsToSections(
@@ -140,13 +223,15 @@ export function findingsToSections(
 
   for (const finding of findings) {
     applyCadastralScalar(sections, finding, documentType);
+    applySocialPresence(sections, finding);
 
     const targets = OSINT_CANONICAL_MAP[finding.category as FindingCategory]?.(documentType) ?? [];
     for (const target of targets) {
       if (
         target.field === 'identityRecords' ||
         target.field === 'addresses' ||
-        target.field === 'domains'
+        target.field === 'domains' ||
+        (finding.category === 'SOCIAL_PRESENCE' && target.field === 'companies')
       ) {
         continue;
       }

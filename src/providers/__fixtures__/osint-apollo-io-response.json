@@ -1,0 +1,32 @@
+{
+  "peopleMatch": {
+    "person": {
+      "id": "apollo-person-1",
+      "first_name": "Maria",
+      "last_name": "Silva",
+      "name": "Maria Silva",
+      "title": "CEO",
+      "email": "maria@indexcore.com.br",
+      "email_status": "verified",
+      "linkedin_url": "https://www.linkedin.com/in/mariasilva",
+      "city": "São Paulo",
+      "state": "São Paulo",
+      "country": "Brazil",
+      "organization": {
+        "name": "INDEX CORE",
+        "primary_domain": "indexcore.com.br",
+        "website_url": "https://indexcore.com.br"
+      },
+      "phone_numbers": [{ "sanitized_number": "+5511999998888" }]
+    }
+  },
+  "organizationsEnrich": {
+    "organization": {
+      "name": "INDEX CORE",
+      "primary_domain": "indexcore.com.br",
+      "website_url": "https://indexcore.com.br",
+      "industry": "Financial Services",
+      "estimated_num_employees": 50
+    }
+  }
+}

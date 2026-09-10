@@ -92,6 +92,13 @@ describe('serializeIntelDossierResponse', () => {
           providerCount: 1,
           findingCount: 0,
         },
+        apollo: {
+          id: 'apollo',
+          label: 'Apollo',
+          status: 'skipped',
+          providerCount: 0,
+          findingCount: 0,
+        },
       },
       canonical: { risk: { level: 'baixo', score: 10 } } as IntelDossierResponse['canonical'],
       riskBrief: { overall: 'GREEN', categories: [] },

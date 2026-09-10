@@ -10,6 +10,9 @@ export interface IntelEnv {
   VERIPHONE_API_KEY: string;
   OPENSANCTIONS_API_KEY: string;
   APIFY_API_TOKEN: string;
+  APOLLO_API_KEY: string;
+  APOLLO_MAX_MATCHES: number;
+  APOLLO_REVEAL_PHONES: string;
   INTERPOL_API_BASE: string;
   PAID_PROVIDERS_ENABLED: string;
   INTEL_SYNC_TIMEOUT_MS: number;
@@ -18,8 +21,13 @@ export interface IntelEnv {
 
 let cached: IntelEnv | null = null;
 
+export function resetIntelEnvCache(): void {
+  cached = null;
+}
+
 export function getEnv(): IntelEnv {
   if (cached) return cached;
+  const maxMatches = Number(process.env.APOLLO_MAX_MATCHES ?? 8);
   cached = {
     PORTAL_TRANSPARENCIA_TOKEN: process.env.PORTAL_TRANSPARENCIA_TOKEN?.trim() ?? '',
     DATAJUD_API_KEY: process.env.DATAJUD_API_KEY?.trim() ?? '',
@@ -32,6 +40,9 @@ export function getEnv(): IntelEnv {
     VERIPHONE_API_KEY: process.env.VERIPHONE_API_KEY?.trim() ?? '',
     OPENSANCTIONS_API_KEY: process.env.OPENSANCTIONS_API_KEY?.trim() ?? '',
     APIFY_API_TOKEN: process.env.APIFY_API_TOKEN?.trim() ?? '',
+    APOLLO_API_KEY: process.env.APOLLO_API_KEY?.trim() ?? '',
+    APOLLO_MAX_MATCHES: Number.isFinite(maxMatches) && maxMatches > 0 ? Math.floor(maxMatches) : 8,
+    APOLLO_REVEAL_PHONES: process.env.APOLLO_REVEAL_PHONES?.trim() ?? 'false',
     INTERPOL_API_BASE:
       process.env.INTERPOL_API_BASE?.trim() || 'https://ws-public.interpol.int/notices/v1',
     PAID_PROVIDERS_ENABLED: process.env.PAID_PROVIDERS_ENABLED?.trim() ?? '',

@@ -26,6 +26,7 @@ import {
   registroBr,
   wikipediaPt,
 } from './free.js';
+import { apollo } from './apollo.js';
 import { openSanctions } from './opensanctions.js';
 import { osintUsername } from './osint.js';
 import { pncp } from './pncp.js';
@@ -1099,6 +1100,7 @@ export const DOSSIER_PROVIDERS: DossierProvider[] = [
   pncp,
   tcuSancoes,
   openSanctions,
+  apollo,
   bnmp,
   dou,
   ofac,
