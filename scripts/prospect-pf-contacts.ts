@@ -439,7 +439,7 @@ async function backfillIncomplete(rows: LeadRow[]): Promise<LeadRow[]> {
       } catch {
         continue;
       }
-      let row = toRow(bucket, enriched);
+      const row = toRow(bucket, enriched);
       if (!row.email || !row.linkedinUrl) continue;
       extras.push(row);
     }
