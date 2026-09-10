@@ -15,9 +15,7 @@
   "authType": "none",
   "authConfigRef": null,
   "fieldMappings": [],
-  "supportedTypes": [
-    "EMAIL"
-  ],
+  "supportedTypes": ["EMAIL"],
   "isActive": true,
   "priority": 50
 }

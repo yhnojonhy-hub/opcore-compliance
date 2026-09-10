@@ -3,16 +3,15 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetIntelEnvCache } from '../../../lib/intel-env.js';
-import {
-  apollo,
-  collectApolloSeeds,
-  mapApolloPerson,
-} from './apollo.js';
+import { apollo, collectApolloSeeds, mapApolloPerson } from './apollo.js';
 import type { ProviderContext } from '../types.js';
 
 const fixture = JSON.parse(
   readFileSync(
-    join(dirname(fileURLToPath(import.meta.url)), '../../__fixtures__/osint-apollo-io-response.json'),
+    join(
+      dirname(fileURLToPath(import.meta.url)),
+      '../../__fixtures__/osint-apollo-io-response.json',
+    ),
     'utf-8',
   ),
 ) as {
@@ -181,9 +180,9 @@ describe('apollo adapter', () => {
     });
 
     expect(result.status).toBe('ok');
-    expect(result.findings.some((f) => f.category === 'IDENTITY' && f.title === 'Maria Silva')).toBe(
-      true,
-    );
+    expect(
+      result.findings.some((f) => f.category === 'IDENTITY' && f.title === 'Maria Silva'),
+    ).toBe(true);
     expect(result.findings.some((f) => f.category === 'SOCIAL_PRESENCE')).toBe(true);
     expect(fetchMock).toHaveBeenCalled();
     const matchCalls = fetchMock.mock.calls.filter((call) =>
@@ -195,7 +194,9 @@ describe('apollo adapter', () => {
       reveal_phone_number?: boolean;
     };
     expect(matchBody.reveal_phone_number).toBe(false);
-    const identity = result.findings.find((f) => f.category === 'IDENTITY' && f.title === 'Maria Silva');
+    const identity = result.findings.find(
+      (f) => f.category === 'IDENTITY' && f.title === 'Maria Silva',
+    );
     expect(identity?.details.phones).toBeUndefined();
     expect(identity?.details.phone).toBeUndefined();
   });

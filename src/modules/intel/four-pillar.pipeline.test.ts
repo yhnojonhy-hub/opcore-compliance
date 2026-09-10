@@ -81,7 +81,11 @@ describe('runFourPillarPipeline', () => {
       partyName: 'JOAO',
       findings: [],
     });
-    mockApolloRun.mockResolvedValue({ status: 'skipped', error: 'APOLLO_API_KEY não configurada', findings: [] });
+    mockApolloRun.mockResolvedValue({
+      status: 'skipped',
+      error: 'APOLLO_API_KEY não configurada',
+      findings: [],
+    });
   });
 
   it('runs BDC then Lemit then BrasilAPI then Extras then Apollo in order', async () => {

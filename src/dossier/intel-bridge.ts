@@ -146,7 +146,11 @@ function applyCadastralScalar(
       const email = readString(record.email)?.toLowerCase();
       if (!email || seen.has(email)) continue;
       seen.add(email);
-      existing.push({ email, ranking: record.ranking ?? null, hasCookie: record.hasCookie ?? null });
+      existing.push({
+        email,
+        ranking: record.ranking ?? null,
+        hasCookie: record.hasCookie ?? null,
+      });
     }
     if (singleEmail && !seen.has(singleEmail.toLowerCase())) {
       existing.push({ email: singleEmail, ranking: 1, hasCookie: null });

@@ -132,8 +132,7 @@ function mapPerson(raw: Record<string, unknown>): Person | null {
       : {};
   const phones = Array.isArray(raw.phone_numbers) ? raw.phone_numbers : [];
   const firstPhone = phones.find((p) => p && typeof p === 'object') as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
   const name =
     asText(raw.name) || [asText(raw.first_name), asText(raw.last_name)].filter(Boolean).join(' ');
   if (!name) return null;
@@ -184,7 +183,10 @@ async function apolloFetch(
   return { status: res.status, text, json };
 }
 
-async function apolloPost(path: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+async function apolloPost(
+  path: string,
+  body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   const result = await apolloFetch('POST', path, body);
   if (result.status >= 400) {
     const msg = asText(result.json.error) || asText(result.json.message) || `HTTP ${result.status}`;
@@ -203,7 +205,9 @@ async function searchPage(bucket: IcpBucket, page: number): Promise<Person[]> {
   });
   const rows = Array.isArray(json.people) ? json.people : [];
   return rows
-    .map((row) => (row && typeof row === 'object' ? mapPerson(row as Record<string, unknown>) : null))
+    .map((row) =>
+      row && typeof row === 'object' ? mapPerson(row as Record<string, unknown>) : null,
+    )
     .filter((p): p is Person => Boolean(p));
 }
 
@@ -235,13 +239,18 @@ async function matchPerson(fallback: Person): Promise<Person> {
     reveal_personal_emails: true,
     reveal_phone_number: false,
   });
-  const raw = (
-    json.person && typeof json.person === 'object' ? json.person : json
-  ) as Record<string, unknown>;
+  const raw = (json.person && typeof json.person === 'object' ? json.person : json) as Record<
+    string,
+    unknown
+  >;
   return mergePerson(fallback, mapPerson(raw));
 }
 
-async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+async function mapLimit<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
   const out: R[] = [];
   let index = 0;
   async function worker() {
@@ -358,7 +367,9 @@ async function fillBucket(
   }
   candidates.sort((a, b) => rank(b) - rank(a));
   const toMatch = candidates.slice(0, Math.min(candidates.length, PER_BUCKET + 8));
-  console.log(`  ${bucket.label}: ${candidates.length} novos na busca, revelando ${toMatch.length}…`);
+  console.log(
+    `  ${bucket.label}: ${candidates.length} novos na busca, revelando ${toMatch.length}…`,
+  );
 
   const matched = await mapLimit(toMatch, MATCH_CONCURRENCY, async (person) => {
     try {

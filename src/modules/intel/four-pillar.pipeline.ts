@@ -540,7 +540,10 @@ export async function runFourPillarPipeline(params: {
   await prisma.intelDossier.update({
     where: { id: params.dossierId },
     data: {
-      status: pillars.extras.status === 'error' && pillars.apollo.status === 'error' ? 'PARTIAL' : 'COMPLETED',
+      status:
+        pillars.extras.status === 'error' && pillars.apollo.status === 'error'
+          ? 'PARTIAL'
+          : 'COMPLETED',
       completedAt: new Date(),
     },
   });
