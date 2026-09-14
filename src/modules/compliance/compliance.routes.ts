@@ -1,4 +1,4 @@
-import type { Express } from 'express';
+import type { Express, NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import type { ComplianceConsultation, DocumentType, Prisma, Provider } from '@prisma/client';
 import { validateDocument } from '../../contracts/utils/document.util.js';
@@ -8,6 +8,12 @@ import { requireJwt } from '../../middleware/auth.js';
 import { prisma } from '../../db/prisma.js';
 import { consultDocument, getCachedConsultations } from './compliance.service.js';
 import { buildDossier } from './dossier.service.js';
+import {
+  buildSliceEnvelope,
+  getSliceCatalogEntry,
+  isSliceCompatible,
+  listDossierSlices,
+} from './dossier.slices.js';
 import { ProviderHttpError } from '../../providers/provider.errors.js';
 
 function complianceErrorStatus(e: unknown): number {
@@ -32,6 +38,10 @@ const consultBodySchema = z.object({
 });
 
 export function registerComplianceRoutes(app: Express) {
+  app.get('/v1/compliance/slices', requireJwt, (_req, res) => {
+    res.json({ items: listDossierSlices() });
+  });
+
   app.get('/v1/compliance/cpf/:document', requireJwt, async (req, res) => {
     try {
       const document = validateDocument(req.params.document, 'CPF');
@@ -141,6 +151,49 @@ export function registerComplianceRoutes(app: Express) {
       res.status(complianceErrorStatus(e)).json({ error: (e as Error).message });
     }
   });
+
+  app.get(
+    '/v1/compliance/dossier/:document/:slice',
+    requireJwt,
+    async (req: Request, res: Response, next: NextFunction) => {
+      const sliceId = req.params.slice;
+      // Let registerFullDossierRoute handle /full (registered after this module).
+      if (sliceId === 'full') {
+        next();
+        return;
+      }
+
+      const entry = getSliceCatalogEntry(sliceId);
+      if (!entry) {
+        res.status(404).json({ error: `Unknown dossier slice: ${sliceId}` });
+        return;
+      }
+
+      const documentType = (req.query.documentType as DocumentType) ?? 'CPF';
+      if (!isSliceCompatible(sliceId, documentType)) {
+        res.status(400).json({
+          error: `Slice "${sliceId}" is only available for documentType=${entry.documentTypes}`,
+        });
+        return;
+      }
+
+      try {
+        const document = validateDocument(req.params.document, documentType);
+        const maxTier = req.query.maxTier ? Number(req.query.maxTier) : undefined;
+        const { dossier } = await buildDossier({
+          document,
+          documentType,
+          providerSlug: req.query.providerSlug as string | undefined,
+          requestedBy: (req as AuthedRequest).auth?.sub,
+          maxTier,
+          forceRefresh: forceRefreshFromQuery(req.query.forceRefresh),
+        });
+        res.json(buildSliceEnvelope(dossier, sliceId));
+      } catch (e) {
+        res.status(complianceErrorStatus(e)).json({ error: (e as Error).message });
+      }
+    },
+  );
 }
 
 export function registerRiskRuleRoutes(app: Express) {

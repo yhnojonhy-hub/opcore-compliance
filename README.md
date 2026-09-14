@@ -177,19 +177,22 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ## Endpoints principais
 
-| Método     | Rota                                    | Auth        |
-| ---------- | --------------------------------------- | ----------- |
-| `GET`      | `/health`                               | —           |
-| `POST`     | `/auth/token`                           | `X-API-Key` |
-| `GET/POST` | `/v1/providers`                         | JWT         |
-| `PUT`      | `/v1/providers/:slug`                   | JWT         |
-| `GET`      | `/v1/compliance/cpf/:document`          | JWT         |
-| `GET`      | `/v1/compliance/cnpj/:document`         | JWT         |
-| `POST`     | `/v1/compliance/consult`                | JWT         |
-| `GET`      | `/v1/compliance/cache/:document`        | JWT         |
-| `GET`      | `/v1/compliance/dossier/:document`      | JWT         |
-| `GET`      | `/v1/compliance/dossier/:document/risk` | JWT         |
-| `GET/POST` | `/v1/risk-rules`                        | JWT         |
+| Método     | Rota                                      | Auth        |
+| ---------- | ----------------------------------------- | ----------- |
+| `GET`      | `/health`                                 | —           |
+| `POST`     | `/auth/token`                             | `X-API-Key` |
+| `GET/POST` | `/v1/providers`                           | JWT         |
+| `PUT`      | `/v1/providers/:slug`                     | JWT         |
+| `GET`      | `/v1/compliance/cpf/:document`            | JWT         |
+| `GET`      | `/v1/compliance/cnpj/:document`           | JWT         |
+| `POST`     | `/v1/compliance/consult`                  | JWT         |
+| `POST`     | `/v1/contacts/resolve-phone`              | JWT (RF12)  |
+| `GET`      | `/v1/compliance/cache/:document`          | JWT         |
+| `GET`      | `/v1/compliance/slices`                   | JWT         |
+| `GET`      | `/v1/compliance/dossier/:document`        | JWT         |
+| `GET`      | `/v1/compliance/dossier/:document/risk`   | JWT         |
+| `GET`      | `/v1/compliance/dossier/:document/:slice` | JWT         |
+| `GET/POST` | `/v1/risk-rules`                          | JWT         |
 
 A segunda consulta do mesmo documento/provedor retorna **cache** (`cacheHit: true`).
 
@@ -226,8 +229,22 @@ curl -s -X POST http://localhost:3010/v1/compliance/consult \
   -H "Content-Type: application/json" \
   -d '{"document":"19131243000197","documentType":"CNPJ","providerSlug":"brasilapi-cnpj"}' | jq .source
 
+# RF12 — telefone comercial (BDC name+email → Lemit → BDC phones)
+curl -s -X POST http://localhost:3010/v1/contacts/resolve-phone \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"João Silva","email":"joao.silva@example.com"}' | jq .
+
 # Dossiê agregado (mock + brasilapi se ambos consultados)
 curl -s "http://localhost:3010/v1/compliance/dossier/19131243000197?documentType=CNPJ" \
+  -H "Authorization: Bearer $TOKEN" | jq .
+
+# Recortes (ex.: contatos, processos, QSA)
+curl -s "http://localhost:3010/v1/compliance/slices" \
+  -H "Authorization: Bearer $TOKEN" | jq .
+curl -s "http://localhost:3010/v1/compliance/dossier/19131243000197/contacts?documentType=CNPJ" \
+  -H "Authorization: Bearer $TOKEN" | jq .
+curl -s "http://localhost:3010/v1/compliance/dossier/19131243000197/qsa?documentType=CNPJ" \
   -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
