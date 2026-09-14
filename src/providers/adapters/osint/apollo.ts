@@ -406,7 +406,7 @@ export const apollo: DossierProvider = {
     const matchResults = await mapLimit(seeds, 2, async (seed) => {
       const body: Record<string, unknown> = {
         reveal_personal_emails: true,
-        reveal_phone_number: false, // RF11: phones from Lemit, never Apollo reveal
+        reveal_phone_number: false, // RF11: dossier never reveals phones; CRM uses RF12 + last-resort reveal
       };
       if (seed.name) body.name = seed.name;
       if (seed.email) body.email = seed.email;

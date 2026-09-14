@@ -1,0 +1,16 @@
+{
+  "Result": [
+    {
+      "MatchKeys": "doc{00011122233300}",
+      "Phones": [
+        {
+          "Number": "988887777",
+          "AreaCode": 11,
+          "Type": "mobile",
+          "Ranking": 1,
+          "WhatsApp": true
+        }
+      ]
+    }
+  ]
+}
