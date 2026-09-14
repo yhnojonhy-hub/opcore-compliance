@@ -156,4 +156,15 @@ describe('dossier.slices', () => {
   it('throws on unknown slice projector', () => {
     expect(() => projectDossierSlice(pfDossier(), 'nope')).toThrow(/Unknown dossier slice/);
   });
+
+  it('tolerates pruned sections missing nested blocks', () => {
+    const dossier = pjDossier();
+    // Simulate pruneEmptyDeep removing empty litigationEsg / fiscalHealth
+    delete (dossier.sections as Record<string, unknown>).litigationEsg;
+    delete (dossier.sections as Record<string, unknown>).fiscalHealth;
+
+    expect(projectDossierSlice(dossier, 'lawsuits')).toEqual({ lawsuits: [] });
+    expect(projectDossierSlice(dossier, 'protests')).toEqual({ protests: [] });
+    expect(projectDossierSlice(dossier, 'esg')).toEqual({ environmentalEmbargoes: [] });
+  });
 });

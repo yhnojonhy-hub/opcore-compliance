@@ -25,16 +25,20 @@ export interface SliceEnvelope {
 
 type SliceProjector = (dossier: ComplianceDossier) => Record<string, unknown>;
 
+/** Sections may be partially pruned by pruneEmptyDeep before projection. */
+type PartialPf = Partial<PfSections>;
+type PartialPj = Partial<PjSections>;
+
 function isPf(dossier: ComplianceDossier): boolean {
   return dossier.subject.type === 'PF';
 }
 
-function pfSections(dossier: ComplianceDossier): PfSections {
-  return dossier.sections as PfSections;
+function pfSections(dossier: ComplianceDossier): PartialPf {
+  return (dossier.sections ?? {}) as PartialPf;
 }
 
-function pjSections(dossier: ComplianceDossier): PjSections {
-  return dossier.sections as PjSections;
+function pjSections(dossier: ComplianceDossier): PartialPj {
+  return (dossier.sections ?? {}) as PartialPj;
 }
 
 function identityData(dossier: ComplianceDossier): Record<string, unknown> {
@@ -42,22 +46,22 @@ function identityData(dossier: ComplianceDossier): Record<string, unknown> {
     const c = pfSections(dossier).cadastral;
     return {
       fullName: dossier.subject.type === 'PF' ? dossier.subject.fullName : null,
-      cpfStatus: c.cpfStatus,
-      cpfRegular: c.cpfRegular,
-      birthDate: c.birthDate,
-      motherName: c.motherName,
-      gender: c.gender,
-      deceased: c.deceased,
-      occupation: c.occupation,
+      cpfStatus: c?.cpfStatus,
+      cpfRegular: c?.cpfRegular,
+      birthDate: c?.birthDate,
+      motherName: c?.motherName,
+      gender: c?.gender,
+      deceased: c?.deceased,
+      occupation: c?.occupation,
     };
   }
   const c = pjSections(dossier).cadastral;
   return {
     legalName: dossier.subject.type === 'PJ' ? dossier.subject.legalName : null,
     tradeName: dossier.subject.type === 'PJ' ? dossier.subject.tradeName : null,
-    cnpjStatus: c.cnpjStatus,
-    openingDate: c.openingDate,
-    companyType: c.companyType,
+    cnpjStatus: c?.cnpjStatus,
+    openingDate: c?.openingDate,
+    companyType: c?.companyType,
   };
 }
 
@@ -65,28 +69,28 @@ function contactsData(dossier: ComplianceDossier): Record<string, unknown> {
   if (isPf(dossier)) {
     const c = pfSections(dossier).cadastral;
     return {
-      fullName: dossier.subject.type === 'PF' ? dossier.subject.fullName : c.fullName,
-      phones: c.phones ?? [],
-      emails: c.emails ?? [],
+      fullName: dossier.subject.type === 'PF' ? dossier.subject.fullName : (c?.fullName ?? null),
+      phones: c?.phones ?? [],
+      emails: c?.emails ?? [],
     };
   }
   const c = pjSections(dossier).cadastral;
   return {
-    legalName: dossier.subject.type === 'PJ' ? dossier.subject.legalName : c.legalName,
-    tradeName: dossier.subject.type === 'PJ' ? dossier.subject.tradeName : c.tradeName,
-    phones: c.phones ?? [],
-    emails: c.emails ?? [],
+    legalName: dossier.subject.type === 'PJ' ? dossier.subject.legalName : (c?.legalName ?? null),
+    tradeName: dossier.subject.type === 'PJ' ? dossier.subject.tradeName : (c?.tradeName ?? null),
+    phones: c?.phones ?? [],
+    emails: c?.emails ?? [],
   };
 }
 
 function addressesData(dossier: ComplianceDossier): Record<string, unknown> {
   const cadastral = isPf(dossier) ? pfSections(dossier).cadastral : pjSections(dossier).cadastral;
-  return { addresses: cadastral.addresses ?? [] };
+  return { addresses: cadastral?.addresses ?? [] };
 }
 
 function vehiclesData(dossier: ComplianceDossier): Record<string, unknown> {
   const cadastral = isPf(dossier) ? pfSections(dossier).cadastral : pjSections(dossier).cadastral;
-  return { vehicles: cadastral.vehicles ?? [] };
+  return { vehicles: cadastral?.vehicles ?? [] };
 }
 
 function cadastralData(dossier: ComplianceDossier): Record<string, unknown> {
@@ -99,90 +103,90 @@ function lawsuitsData(dossier: ComplianceDossier): Record<string, unknown> {
   if (isPf(dossier)) {
     const lit = pfSections(dossier).litigation;
     return {
-      lawsuits: lit.lawsuits ?? [],
-      criminalRecords: lit.criminalRecords ?? [],
+      lawsuits: lit?.lawsuits ?? [],
+      criminalRecords: lit?.criminalRecords ?? [],
     };
   }
-  return { lawsuits: pjSections(dossier).litigationEsg.lawsuits ?? [] };
+  return { lawsuits: pjSections(dossier).litigationEsg?.lawsuits ?? [] };
 }
 
 function protestsData(dossier: ComplianceDossier): Record<string, unknown> {
   if (isPf(dossier)) {
-    return { protests: pfSections(dossier).financial.protests ?? [] };
+    return { protests: pfSections(dossier).financial?.protests ?? [] };
   }
-  return { protests: pjSections(dossier).fiscalHealth.protests ?? [] };
+  return { protests: pjSections(dossier).fiscalHealth?.protests ?? [] };
 }
 
 function sanctionsData(dossier: ComplianceDossier): Record<string, unknown> {
   if (isPf(dossier)) {
     const p = pfSections(dossier).pldft;
     return {
-      isPep: p.isPep,
-      pepLevel: p.pepLevel,
-      pepRelated: p.pepRelated,
-      isSanctioned: p.isSanctioned,
-      sanctionsHits: p.sanctionsHits ?? [],
-      sanctionsHitsConfirmed: p.sanctionsHitsConfirmed ?? [],
-      restrictiveListHits: p.restrictiveListHits ?? [],
+      isPep: p?.isPep,
+      pepLevel: p?.pepLevel,
+      pepRelated: p?.pepRelated,
+      isSanctioned: p?.isSanctioned,
+      sanctionsHits: p?.sanctionsHits ?? [],
+      sanctionsHitsConfirmed: p?.sanctionsHitsConfirmed ?? [],
+      restrictiveListHits: p?.restrictiveListHits ?? [],
     };
   }
-  return { ...pjSections(dossier).sanctions };
+  return { ...(pjSections(dossier).sanctions ?? {}) };
 }
 
 function esgData(dossier: ComplianceDossier): Record<string, unknown> {
   if (isPf(dossier)) {
-    return { ...pfSections(dossier).esg };
+    return { ...(pfSections(dossier).esg ?? {}) };
   }
   const lit = pjSections(dossier).litigationEsg;
   return {
-    laborCompliance: lit.laborCompliance,
-    environmentalEmbargoes: lit.environmentalEmbargoes ?? [],
+    laborCompliance: lit?.laborCompliance,
+    environmentalEmbargoes: lit?.environmentalEmbargoes ?? [],
   };
 }
 
 function pldftData(dossier: ComplianceDossier): Record<string, unknown> {
-  return { ...pfSections(dossier).pldft };
+  return { ...(pfSections(dossier).pldft ?? {}) };
 }
 
 function financialData(dossier: ComplianceDossier): Record<string, unknown> {
-  return { ...pfSections(dossier).financial };
+  return { ...(pfSections(dossier).financial ?? {}) };
 }
 
 function corporateLinksData(dossier: ComplianceDossier): Record<string, unknown> {
-  return { ...pfSections(dossier).corporateLinks };
+  return { ...(pfSections(dossier).corporateLinks ?? {}) };
 }
 
 function qsaData(dossier: ComplianceDossier): Record<string, unknown> {
-  return { qsa: pjSections(dossier).corporateStructure.qsa ?? [] };
+  return { qsa: pjSections(dossier).corporateStructure?.qsa ?? [] };
 }
 
 function uboData(dossier: ComplianceDossier): Record<string, unknown> {
-  return { uboTree: pjSections(dossier).corporateStructure.uboTree ?? [] };
+  return { uboTree: pjSections(dossier).corporateStructure?.uboTree ?? [] };
 }
 
 function corporateStructureData(dossier: ComplianceDossier): Record<string, unknown> {
-  return { ...pjSections(dossier).corporateStructure };
+  return { ...(pjSections(dossier).corporateStructure ?? {}) };
 }
 
 function fiscalHealthData(dossier: ComplianceDossier): Record<string, unknown> {
-  return { ...pjSections(dossier).fiscalHealth };
+  return { ...(pjSections(dossier).fiscalHealth ?? {}) };
 }
 
 function certificatesData(dossier: ComplianceDossier): Record<string, unknown> {
-  return { ...pjSections(dossier).certificates };
+  return { ...(pjSections(dossier).certificates ?? {}) };
 }
 
 function creditData(dossier: ComplianceDossier): Record<string, unknown> {
-  return { ...pjSections(dossier).credit };
+  return { ...(pjSections(dossier).credit ?? {}) };
 }
 
 function cnaeData(dossier: ComplianceDossier): Record<string, unknown> {
   const c = pjSections(dossier).cadastral;
   return {
-    cnae: c.cnae,
-    cnaeMatch: c.cnaeMatch,
-    cnaeDescription: c.cnaeDescription,
-    companyType: c.companyType,
+    cnae: c?.cnae,
+    cnaeMatch: c?.cnaeMatch,
+    cnaeDescription: c?.cnaeDescription,
+    companyType: c?.companyType,
   };
 }
 
