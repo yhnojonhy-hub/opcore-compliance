@@ -10,6 +10,7 @@ import {
 } from './modules/compliance/compliance.routes.js';
 import { registerIntelRoutes, registerFullDossierRoute } from './modules/intel/intel.routes.js';
 import { registerContactsRoutes } from './modules/contacts/contacts.routes.js';
+import { registerBillingRoutes } from './modules/billing/billing.routes.js';
 
 export function createApp() {
   const app = express();
@@ -40,6 +41,7 @@ export function createApp() {
   registerIntelRoutes(app);
   registerFullDossierRoute(app);
   registerContactsRoutes(app);
+  registerBillingRoutes(app);
 
   return app;
 }

@@ -180,6 +180,25 @@ model AuditLog {
   @@index([createdAt])
 }
 
+enum BillingVendor {
+  bigdatacorp
+  lemit
+  apollo
+}
+
+/// Ledger append-only de chamadas pagas que saíram para o fornecedor (cache miss).
+model ProviderUsageEvent {
+  id           String        @id @default(cuid())
+  vendor       BillingVendor
+  providerSlug String
+  dataset      String?
+  credits      Decimal?      @db.Decimal(12, 4)
+  unitCostBrl  Decimal?      @db.Decimal(12, 4)
+  createdAt    DateTime      @default(now())
+
+  @@index([vendor, createdAt])
+}
+
 model IntelDossier {
   id           String             @id @default(cuid())
   target       String

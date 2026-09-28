@@ -1,6 +1,7 @@
 import { getEnv } from '../../../lib/intel-env.js';
 import { isValidEmail } from '../../../contracts/utils/document.util.js';
 import { asRecord, fetchJson } from '../http.util.js';
+import { recordProviderUsage } from '../../../billing/usage-ledger.js';
 import type {
   DossierProvider,
   ProviderContext,
@@ -306,6 +307,13 @@ async function apolloPost(
     },
     12_000,
   );
+  if (result.ok) {
+    const json = asRecord(result.json);
+    const matched = json.person != null || json.organization != null;
+    const credits =
+      typeof json.credits_consumed === 'number' ? json.credits_consumed : matched ? 1 : 0;
+    void recordProviderUsage({ providerSlug: 'osint-apollo-io', dataset: path, credits });
+  }
   return {
     ok: result.ok,
     status: result.status,

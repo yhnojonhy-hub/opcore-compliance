@@ -3,6 +3,7 @@ import { env } from '../lib/env.js';
 import type { ConsultContext } from './provider.interface.js';
 import { interpolateTemplate, loadFixture } from './provider.mapper.js';
 import { ProviderHttpError } from './provider.errors.js';
+import { recordProviderUsage } from '../billing/usage-ledger.js';
 
 export async function executeProvider(provider: Provider, ctx: ConsultContext): Promise<unknown> {
   const templateCtx = {
@@ -51,6 +52,11 @@ export async function executeProvider(provider: Provider, ctx: ConsultContext): 
     );
   }
 
+  void recordProviderUsage({
+    providerSlug: provider.slug,
+    dataset: bdcDataset(provider),
+  });
+
   const contentType = response.headers.get('content-type') ?? '';
   if (contentType.includes('application/json')) {
     const json = await response.json();
@@ -59,6 +65,11 @@ export async function executeProvider(provider: Provider, ctx: ConsultContext): 
     return json;
   }
   return { raw: await response.text() };
+}
+
+function bdcDataset(provider: Provider): string | null {
+  const meta = (provider.requestTemplate as { _bdcMeta?: { dataset?: unknown } } | null)?._bdcMeta;
+  return typeof meta?.dataset === 'string' ? meta.dataset : null;
 }
 
 function isFormUrlEncoded(contentType: string | undefined): boolean {
