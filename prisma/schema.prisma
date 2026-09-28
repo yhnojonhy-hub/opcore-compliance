@@ -186,6 +186,19 @@ enum BillingVendor {
   apollo
 }
 
+/// Cache da consulta consolidada de processo pelo número CNJ (20 dígitos).
+model LawsuitLookup {
+  id        String   @id @default(cuid())
+  number    String   @unique
+  payload   Json
+  found     Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([expiresAt])
+}
+
 /// Ledger append-only de chamadas pagas que saíram para o fornecedor (cache miss).
 model ProviderUsageEvent {
   id           String        @id @default(cuid())

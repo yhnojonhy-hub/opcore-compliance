@@ -210,44 +210,71 @@ const GROUP_ORDER: DataJudTribunalGroup[] = [
   'Justiça Militar',
 ];
 
+/** Ordem das UFs usada no campo TR (Res. CNJ 65/2008) para Justiça Estadual e Eleitoral. */
+const CNJ_UF_ORDER = [
+  'ac',
+  'al',
+  'am',
+  'ap',
+  'ba',
+  'ce',
+  'df',
+  'es',
+  'go',
+  'ma',
+  'mt',
+  'ms',
+  'mg',
+  'pa',
+  'pb',
+  'pe',
+  'pi',
+  'pr',
+  'rj',
+  'rn',
+  'ro',
+  'rr',
+  'rs',
+  'sc',
+  'se',
+  'sp',
+  'to',
+] as const;
+
+function tr(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+function buildCnjJtrMap(): Record<string, string> {
+  const map: Record<string, string> = { '300': 'stj', '500': 'tst', '600': 'tse' };
+  CNJ_UF_ORDER.forEach((uf, i) => {
+    map[`8${tr(i + 1)}`] = uf === 'df' ? 'tjdft' : `tj${uf}`;
+    map[`6${tr(i + 1)}`] = uf === 'df' ? 'tre-dft' : `tre-${uf}`;
+  });
+  for (let n = 1; n <= 6; n += 1) map[`4${tr(n)}`] = `trf${n}`;
+  for (let n = 1; n <= 24; n += 1) map[`5${tr(n)}`] = `trt${n}`;
+  for (let n = 0; n <= 12; n += 1) map[`7${tr(n)}`] = 'stm';
+  map['913'] = 'tjmmg';
+  map['921'] = 'tjmrs';
+  map['926'] = 'tjmsp';
+  return map;
+}
+
 /**
  * Código J+TR do número CNJ (20 dígitos) → alias DataJud.
- * Ex.: 8.26 (estadual SP) → "826" → tjsp
+ * Ex.: 8.26 (estadual SP) → "826" → tjsp; 5.02 → trt2; 4.03 → trf3
  */
-export const CNJ_JTR_TO_ALIAS: Record<string, string> = {
-  '801': 'tjac',
-  '802': 'tjal',
-  '803': 'tjam',
-  '804': 'tjap',
-  '805': 'tjba',
-  '806': 'tjce',
-  '807': 'tjdft',
-  '808': 'tjes',
-  '809': 'tjgo',
-  '810': 'tjma',
-  '811': 'tjmt',
-  '812': 'tjms',
-  '813': 'tjmg',
-  '814': 'tjpa',
-  '815': 'tjpb',
-  '816': 'tjpe',
-  '817': 'tjpi',
-  '818': 'tjpr',
-  '819': 'tjrj',
-  '820': 'tjrn',
-  '821': 'tjro',
-  '822': 'tjrr',
-  '823': 'tjrs',
-  '824': 'tjsc',
-  '825': 'tjse',
-  '826': 'tjsp',
-  '827': 'tjto',
-  '301': 'trf1',
-  '302': 'trf2',
-  '303': 'trf3',
-  '304': 'trf4',
-  '305': 'trf5',
-  '306': 'trf6',
+export const CNJ_JTR_TO_ALIAS: Record<string, string> = buildCnjJtrMap();
+
+/** Grupo de tribunais DataJud pelo dígito J do número CNJ. */
+export const CNJ_SEGMENT_GROUP: Record<string, DataJudTribunalGroup> = {
+  '3': 'Tribunais Superiores',
+  '4': 'Justiça Federal',
+  '5': 'Justiça do Trabalho',
+  '6': 'Justiça Eleitoral',
+  '7': 'Justiça Militar',
+  '8': 'Justiça Estadual',
+  '9': 'Justiça Militar',
 };
 
 export function listDataJudTribunals(): DataJudTribunal[] {

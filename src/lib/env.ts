@@ -25,4 +25,5 @@ export const env = {
   bdcSanctionsConfirmedMatchRate: Number(process.env.BDC_SANCTIONS_CONFIRMED_MATCH_RATE ?? 85),
   intelSyncTimeoutMs: Number(process.env.INTEL_SYNC_TIMEOUT_MS ?? 14_000),
   intelAsyncTimeoutMs: Number(process.env.INTEL_ASYNC_TIMEOUT_MS ?? 40_000),
+  lawsuitLookupTtlHours: Number(process.env.LAWSUIT_LOOKUP_TTL_HOURS ?? 6),
 };
