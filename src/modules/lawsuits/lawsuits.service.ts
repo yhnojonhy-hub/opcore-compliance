@@ -13,7 +13,8 @@ import {
   type DataJudByNumberResult,
   searchDataJudByNumber,
 } from '../../providers/adapters/datajud/by-number.js';
-import { buildDossier } from '../compliance/dossier.service.js';
+import { consultAllForDocument } from '../compliance/compliance.orchestrator.js';
+import { assembleDossierFromCache } from '../compliance/dossier.service.js';
 import { buildSliceEnvelope } from '../compliance/dossier.slices.js';
 
 export class InvalidCnjError extends Error {
@@ -48,14 +49,30 @@ export interface LawsuitLookupDeps {
   now?: () => Date;
 }
 
+/** Only the paid datasets that return lawsuits; the full catalog would bill every dataset per document. */
+export const LAWSUIT_PROVIDER_SLUGS = [
+  'bigdatacorp-pf-processes',
+  'bigdatacorp-pj-processes',
+  'bigdatacorp-pj-owners_lawsuits',
+];
+
 async function defaultLawsuitsByDocument(
   doc: LawsuitLookupDocument,
   forceRefresh: boolean,
 ): Promise<Lawsuit[]> {
-  const { dossier } = await buildDossier({
+  const results = await consultAllForDocument({
     document: doc.document,
     documentType: doc.documentType,
+    slugAllowList: LAWSUIT_PROVIDER_SLUGS,
+    maxTier: 3,
+    softFail: true,
     forceRefresh,
+  });
+  if (results.length === 0) throw new Error('bureaus de processos indisponíveis');
+  const { dossier } = await assembleDossierFromCache({
+    document: doc.document,
+    documentType: doc.documentType,
+    persist: false,
   });
   const data = buildSliceEnvelope(dossier, 'lawsuits').data as { lawsuits?: Lawsuit[] };
   return data.lawsuits ?? [];

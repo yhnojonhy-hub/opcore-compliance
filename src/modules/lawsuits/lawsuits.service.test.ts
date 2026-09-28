@@ -2,9 +2,16 @@ import { describe, expect, it, vi } from 'vitest';
 import type { DataJudByNumberResult } from '../../providers/adapters/datajud/by-number.js';
 
 vi.mock('../../db/prisma.js', () => ({ prisma: {} }));
-vi.mock('../compliance/dossier.service.js', () => ({ buildDossier: vi.fn() }));
+const mockConsultAll = vi.hoisted(() => vi.fn());
+const mockAssemble = vi.hoisted(() => vi.fn());
+const mockSlice = vi.hoisted(() => vi.fn());
+vi.mock('../compliance/compliance.orchestrator.js', () => ({
+  consultAllForDocument: mockConsultAll,
+}));
+vi.mock('../compliance/dossier.slices.js', () => ({ buildSliceEnvelope: mockSlice }));
+vi.mock('../compliance/dossier.service.js', () => ({ assembleDossierFromCache: mockAssemble }));
 
-const { lookupLawsuit, normalizeLookupDocuments, InvalidCnjError } =
+const { lookupLawsuit, normalizeLookupDocuments, InvalidCnjError, LAWSUIT_PROVIDER_SLUGS } =
   await import('./lawsuits.service.js');
 
 const NUMBER = '5003495-02.2026.8.24.0037';
@@ -161,6 +168,25 @@ describe('lookupLawsuit', () => {
     );
     expect(detail.found).toBe(true);
     expect(detail.sources[1]).toMatchObject({ status: 'error', error: 'BDC fora' });
+  });
+});
+
+describe('bureaus por documento', () => {
+  it('consulta só os provedores de processos, sem o catálogo inteiro', async () => {
+    mockConsultAll.mockResolvedValue([{}]);
+    mockAssemble.mockResolvedValue({ dossier: { meta: {} } });
+    mockSlice.mockReturnValue({ data: { lawsuits: [{ caseNumber: NUMBER, status: 'ATIVO' }] } });
+    const d = deps();
+    delete (d as Record<string, unknown>).lawsuitsByDocument;
+    const detail = await lookupLawsuit(
+      { number: NUMBER, documents: [{ document: CPF, documentType: 'CPF' }], forceRefresh: true },
+      d,
+    );
+    expect(mockConsultAll).toHaveBeenCalledWith(
+      expect.objectContaining({ slugAllowList: LAWSUIT_PROVIDER_SLUGS, forceRefresh: false }),
+    );
+    expect(mockAssemble).toHaveBeenCalledWith(expect.objectContaining({ persist: false }));
+    expect(detail.status).toBe('ATIVO');
   });
 });
 
