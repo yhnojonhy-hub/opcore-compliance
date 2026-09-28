@@ -66,6 +66,8 @@ export interface DataJudByNumberDeps {
 }
 
 const RETRY_DELAYS_MS = [1_500, 4_000];
+/** DataJud sometimes hangs; a hung attempt is retried instead of waiting the full env timeout. */
+const ATTEMPT_TIMEOUT_MS = 30_000;
 
 function toDate(value?: string): string | null {
   if (!value) return null;
@@ -172,7 +174,7 @@ export async function searchDataJudByNumber(
     return { status: 'skipped', error: `Tribunal do código CNJ ${cnj.jtr} sem endpoint DataJud` };
   }
 
-  const timeoutMs = Math.min(Math.max(env.DATAJUD_REQUEST_TIMEOUT_MS, 5_000), 120_000);
+  const timeoutMs = Math.min(Math.max(env.DATAJUD_REQUEST_TIMEOUT_MS, 5_000), ATTEMPT_TIMEOUT_MS);
   let lastError: { status: number } | null = null;
   for (const alias of aliases) {
     const result = await queryAlias(alias, cnj.digits, env.DATAJUD_API_KEY, timeoutMs, resolved);
