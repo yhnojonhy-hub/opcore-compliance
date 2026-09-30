@@ -12,10 +12,11 @@ const searchBodySchema = z.object({
     .array(z.object({ document: z.string().min(1), documentType: z.enum(['CPF', 'CNPJ']) }))
     .min(1)
     .max(20),
+  forceRefresh: z.boolean().optional(),
 });
 
 export function registerLawsuitRoutes(app: Express) {
-  /** Processo pelo número, buscado entre os processos dos CPFs/CNPJs das partes (BigDataCorp). */
+  /** Processo pelo número em todas as fontes: processos dos CPFs/CNPJs das partes e DataJud. */
   app.post('/v1/compliance/lawsuits/search', requireJwt, async (req, res) => {
     const parsed = searchBodySchema.safeParse(req.body);
     if (!parsed.success) {
@@ -37,6 +38,7 @@ export function registerLawsuitRoutes(app: Express) {
         number: parsed.data.number,
         documents,
         requestedBy: (req as AuthedRequest).auth?.sub,
+        forceRefresh: parsed.data.forceRefresh,
       });
       await logAudit({
         action: 'lawsuit_search',
@@ -44,7 +46,8 @@ export function registerLawsuitRoutes(app: Express) {
         metadata: {
           found: result.found,
           movements: result.movements.length,
-          sources: result.sources.map((s) => s.status),
+          forceRefresh: parsed.data.forceRefresh === true,
+          sources: result.sources.map((s) => `${s.name}: ${s.status}`),
         },
       });
       res.json(result);

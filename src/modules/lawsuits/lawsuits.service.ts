@@ -1,6 +1,11 @@
 import { createHash } from 'node:crypto';
 import type { DocumentType } from '@prisma/client';
 import { consultDocument } from '../compliance/compliance.service.js';
+import {
+  searchDataJudByNumber,
+  type DataJudByNumberResult,
+  type DataJudLawsuit,
+} from './datajud-by-number.js';
 
 export const LAWSUIT_PROVIDER_BY_TYPE: Record<DocumentType, string> = {
   CPF: 'bigdatacorp-pf-processes',
@@ -17,7 +22,8 @@ export interface LawsuitSearchDocument {
 export interface LawsuitSearchMovement {
   id: string;
   date: string;
-  kind: 'update' | 'decision' | 'petition';
+  kind: 'update' | 'decision' | 'petition' | 'court_movement';
+  source: 'BigDataCorp' | 'DataJud CNJ';
   content: string;
 }
 
@@ -29,9 +35,8 @@ export interface LawsuitSearchParty {
 }
 
 export interface LawsuitSearchSource {
-  document: string;
-  documentType: DocumentType;
-  status: 'ok' | 'not_found' | 'error';
+  name: string;
+  status: 'ok' | 'not_found' | 'error' | 'skipped';
   detail?: string;
 }
 
@@ -42,6 +47,7 @@ export interface LawsuitSearchResult {
   courtLevel: string | null;
   district: string | null;
   state: string | null;
+  cityIbgeCode: string | null;
   judgingBody: string | null;
   judge: string | null;
   type: string | null;
@@ -60,6 +66,7 @@ type Consult = typeof consultDocument;
 
 export interface LawsuitSearchDeps {
   consult?: Consult;
+  dataJud?: (digits: string) => Promise<DataJudByNumberResult>;
 }
 
 type RawRecord = Record<string, unknown>;
@@ -110,7 +117,8 @@ function movementId(number: string, when: string, content: string): string {
 }
 
 function movementsOf(number: string, lawsuit: RawRecord): LawsuitSearchMovement[] {
-  const items: Omit<LawsuitSearchMovement, 'id'>[] = [
+  type BureauMovement = { kind: 'update' | 'decision' | 'petition'; date: string; content: string };
+  const items = [
     ...asArray(lawsuit.Updates).map((u) => ({
       kind: 'update' as const,
       date: date(asRecord(u).PublishDate) ?? date(asRecord(u).CaptureDate),
@@ -129,8 +137,12 @@ function movementsOf(number: string, lawsuit: RawRecord): LawsuitSearchMovement[
         content: type ? `PETIÇÃO: ${type}` : null,
       };
     }),
-  ].filter((m): m is Omit<LawsuitSearchMovement, 'id'> => m.date != null && m.content != null);
-  return items.map((m) => ({ ...m, id: movementId(number, m.date, m.content) }));
+  ].filter((m): m is BureauMovement => m.date != null && m.content != null);
+  return items.map((m) => ({
+    ...m,
+    source: 'BigDataCorp' as const,
+    id: movementId(number, m.date, m.content),
+  }));
 }
 
 function emptyResult(number: string, sources: LawsuitSearchSource[]): LawsuitSearchResult {
@@ -141,6 +153,7 @@ function emptyResult(number: string, sources: LawsuitSearchSource[]): LawsuitSea
     courtLevel: null,
     district: null,
     state: null,
+    cityIbgeCode: null,
     judgingBody: null,
     judge: null,
     type: null,
@@ -156,13 +169,26 @@ function emptyResult(number: string, sources: LawsuitSearchSource[]): LawsuitSea
   };
 }
 
-/** Merge every occurrence of the lawsuit (one per party document), preferring the freshest row. */
-export function mergeLawsuitRows(
+const STATE_BY_ALIAS: Record<string, string> = { tjdft: 'DF' };
+
+function stateFromAlias(alias: string): string | null {
+  if (STATE_BY_ALIAS[alias]) return STATE_BY_ALIAS[alias];
+  const match = /^tj([a-z]{2})$/.exec(alias);
+  return match ? match[1].toUpperCase() : null;
+}
+
+/**
+ * Merge the BigDataCorp occurrences of the lawsuit (one per party document, freshest first) with
+ * the DataJud record. BigDataCorp wins on descriptive fields; DataJud fills gaps and adds the
+ * recent court movements BigDataCorp has not captured yet.
+ */
+export function mergeLawsuitSources(
   number: string,
   rows: RawRecord[],
+  dataJud: DataJudLawsuit | null,
   sources: LawsuitSearchSource[],
 ): LawsuitSearchResult {
-  if (rows.length === 0) return emptyResult(number, sources);
+  if (rows.length === 0 && !dataJud) return emptyResult(number, sources);
   const sorted = [...rows].sort((a, b) =>
     (date(b.LastUpdate) ?? date(b.LastMovementDate) ?? '').localeCompare(
       date(a.LastUpdate) ?? date(a.LastMovementDate) ?? '',
@@ -175,6 +201,10 @@ export function mergeLawsuitRows(
 
   const movements = new Map<string, LawsuitSearchMovement>();
   for (const row of sorted) for (const m of movementsOf(number, row)) movements.set(m.id, m);
+  for (const m of dataJud?.movements ?? []) {
+    movements.set(m.id, { ...m, kind: 'court_movement', source: 'DataJud CNJ' });
+  }
+  const ordered = [...movements.values()].sort((a, b) => b.date.localeCompare(a.date));
 
   const parties = new Map<string, LawsuitSearchParty>();
   for (const row of sorted) {
@@ -193,31 +223,70 @@ export function mergeLawsuitRows(
   return {
     number,
     found: true,
-    court: pick('CourtName'),
-    courtLevel: pick('CourtLevel'),
+    court: pick('CourtName') ?? dataJud?.tribunal ?? null,
+    courtLevel: pick('CourtLevel') ?? dataJud?.degree ?? null,
     district: pick('CourtDistrict'),
-    state: pick('State'),
-    judgingBody: pick('JudgingBody'),
+    state: pick('State') ?? (dataJud ? stateFromAlias(dataJud.alias) : null),
+    cityIbgeCode: dataJud?.cityIbgeCode ?? null,
+    judgingBody: pick('JudgingBody') ?? dataJud?.judgingBody ?? null,
     judge: pick('Judge'),
-    type: pick('Type') ?? pick('InferredCNJProcedureTypeName'),
-    subject: pick('MainSubject') ?? pick('InferredCNJSubjectName'),
+    type: pick('Type') ?? pick('InferredCNJProcedureTypeName') ?? dataJud?.className ?? null,
+    subject: pick('MainSubject') ?? pick('InferredCNJSubjectName') ?? dataJud?.subject ?? null,
     status: pick('Status'),
     amount,
-    noticeDate: pickDate('NoticeDate'),
-    lastMovementDate: pickDate('LastMovementDate'),
+    noticeDate: pickDate('NoticeDate') ?? dataJud?.filedAt ?? null,
+    lastMovementDate: ordered[0]?.date ?? pickDate('LastMovementDate'),
     closeDate: pickDate('CloseDate'),
     parties: [...parties.values()],
-    movements: [...movements.values()].sort((a, b) => b.date.localeCompare(a.date)),
+    movements: ordered,
     sources,
   };
 }
 
+async function searchBureau(
+  number: string,
+  doc: LawsuitSearchDocument,
+  consult: Consult,
+  input: { requestedBy?: string; forceRefresh?: boolean },
+): Promise<{ matches: RawRecord[]; source: LawsuitSearchSource }> {
+  const name = `BigDataCorp (${doc.documentType} ${maskDocument(doc.document, doc.documentType)})`;
+  try {
+    const result = await consult({
+      document: doc.document,
+      documentType: doc.documentType,
+      providerSlug: LAWSUIT_PROVIDER_BY_TYPE[doc.documentType],
+      requestedBy: input.requestedBy,
+      includeRaw: true,
+      forceRefresh: input.forceRefresh,
+    });
+    const lawsuits = extractLawsuits(result.rawPayload);
+    const matches = lawsuits.filter((l) => lawsuitDigits(String(l.Number ?? '')) === number);
+    return matches.length > 0
+      ? { matches, source: { name, status: 'ok' } }
+      : {
+          matches,
+          source: {
+            name,
+            status: 'not_found',
+            detail: `${lawsuits.length} processo(s) do documento, nenhum com este número`,
+          },
+        };
+  } catch (e) {
+    return { matches: [], source: { name, status: 'error', detail: (e as Error).message } };
+  }
+}
+
 /**
- * Finds a lawsuit by number among the lawsuits of its parties' CPF/CNPJ (BigDataCorp processes
- * datasets only, reusing the consultation cache).
+ * Finds a lawsuit by number across every OpCore source: the BigDataCorp processes dataset of
+ * each party CPF/CNPJ and the DataJud index of the court in the number.
  */
 export async function searchLawsuit(
-  input: { number: string; documents: LawsuitSearchDocument[]; requestedBy?: string },
+  input: {
+    number: string;
+    documents: LawsuitSearchDocument[];
+    requestedBy?: string;
+    forceRefresh?: boolean;
+  },
   deps: LawsuitSearchDeps = {},
 ): Promise<LawsuitSearchResult> {
   const number = lawsuitDigits(input.number);
@@ -227,50 +296,37 @@ export async function searchLawsuit(
     );
   }
   const consult = deps.consult ?? consultDocument;
+  const dataJudSearch = deps.dataJud ?? ((digits: string) => searchDataJudByNumber(digits));
   const documents = [
     ...new Map(input.documents.map((d) => [`${d.documentType}:${d.document}`, d])).values(),
   ];
 
-  const outcomes = await Promise.all(
-    documents.map(async (doc) => {
-      const label = maskDocument(doc.document, doc.documentType);
-      try {
-        const result = await consult({
-          document: doc.document,
-          documentType: doc.documentType,
-          providerSlug: LAWSUIT_PROVIDER_BY_TYPE[doc.documentType],
-          requestedBy: input.requestedBy,
-          includeRaw: true,
-        });
-        const lawsuits = extractLawsuits(result.rawPayload);
-        const matches = lawsuits.filter((l) => lawsuitDigits(String(l.Number ?? '')) === number);
-        const source: LawsuitSearchSource =
-          matches.length > 0
-            ? { document: label, documentType: doc.documentType, status: 'ok' }
-            : {
-                document: label,
-                documentType: doc.documentType,
-                status: 'not_found',
-                detail: `${lawsuits.length} processo(s) do documento, nenhum com este número`,
-              };
-        return { matches, source };
-      } catch (e) {
-        return {
-          matches: [] as RawRecord[],
-          source: {
-            document: label,
-            documentType: doc.documentType,
-            status: 'error' as const,
-            detail: (e as Error).message,
-          },
-        };
-      }
-    }),
-  );
+  const [bureaus, dataJud] = await Promise.all([
+    Promise.all(documents.map((doc) => searchBureau(number, doc, consult, input))),
+    dataJudSearch(number).catch((e): DataJudByNumberResult => ({
+      status: 'error',
+      alias: null,
+      detail: (e as Error).message,
+    })),
+  ]);
 
-  return mergeLawsuitRows(
+  const dataJudSource: LawsuitSearchSource =
+    dataJud.status === 'ok'
+      ? {
+          name: `DataJud CNJ (${dataJud.lawsuit.alias.toUpperCase()})`,
+          status: 'ok',
+          detail: `${dataJud.lawsuit.movements.length} movimento(s)`,
+        }
+      : {
+          name: `DataJud CNJ${dataJud.alias ? ` (${dataJud.alias.toUpperCase()})` : ''}`,
+          status: dataJud.status,
+          detail: dataJud.detail,
+        };
+
+  return mergeLawsuitSources(
     number,
-    outcomes.flatMap((o) => o.matches),
-    outcomes.map((o) => o.source),
+    bureaus.flatMap((b) => b.matches),
+    dataJud.status === 'ok' ? dataJud.lawsuit : null,
+    [...bureaus.map((b) => b.source), dataJudSource],
   );
 }

@@ -58,11 +58,18 @@ describe('POST /v1/compliance/lawsuits/search', () => {
     const res = await request(app)
       .post(url)
       .set('Authorization', `Bearer ${token}`)
-      .send({ number: '1'.repeat(20), documents: [{ document: CNPJ, documentType: 'CNPJ' }] });
+      .send({
+        number: '1'.repeat(20),
+        documents: [{ document: CNPJ, documentType: 'CNPJ' }],
+        forceRefresh: true,
+      });
     expect(res.status).toBe(200);
     expect(res.body.found).toBe(true);
     expect(mockSearch).toHaveBeenCalledWith(
-      expect.objectContaining({ documents: [{ document: CNPJ, documentType: 'CNPJ' }] }),
+      expect.objectContaining({
+        documents: [{ document: CNPJ, documentType: 'CNPJ' }],
+        forceRefresh: true,
+      }),
     );
     expect(mockAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'lawsuit_search' }));
   });
