@@ -6,6 +6,11 @@ import {
   type DataJudByNumberResult,
   type DataJudLawsuit,
 } from './datajud-by-number.js';
+import {
+  searchDjenByNumber,
+  type DjenByNumberResult,
+  type DjenCommunication,
+} from './djen-by-number.js';
 
 export const LAWSUIT_PROVIDER_BY_TYPE: Record<DocumentType, string> = {
   CPF: 'bigdatacorp-pf-processes',
@@ -22,9 +27,14 @@ export interface LawsuitSearchDocument {
 export interface LawsuitSearchMovement {
   id: string;
   date: string;
-  kind: 'update' | 'decision' | 'petition' | 'court_movement';
-  source: 'BigDataCorp' | 'DataJud CNJ';
+  kind: 'update' | 'decision' | 'petition' | 'court_movement' | 'intimation';
+  source: 'BigDataCorp' | 'DataJud CNJ' | 'DJEN';
   content: string;
+  /** DJEN only: availability date (YYYY-MM-DD), recipients and link to the document. */
+  availableAt?: string;
+  recipients?: string[];
+  documentType?: string | null;
+  link?: string | null;
 }
 
 export interface LawsuitSearchParty {
@@ -67,6 +77,7 @@ type Consult = typeof consultDocument;
 export interface LawsuitSearchDeps {
   consult?: Consult;
   dataJud?: (digits: string) => Promise<DataJudByNumberResult>;
+  djen?: (digits: string) => Promise<DjenByNumberResult>;
 }
 
 type RawRecord = Record<string, unknown>;
@@ -177,18 +188,33 @@ function stateFromAlias(alias: string): string | null {
   return match ? match[1].toUpperCase() : null;
 }
 
+function intimationOf(c: DjenCommunication): LawsuitSearchMovement {
+  return {
+    id: `djen:${c.id}`,
+    date: `${c.availableAt}T00:00:00`,
+    kind: 'intimation',
+    source: 'DJEN',
+    content: c.text,
+    availableAt: c.availableAt,
+    recipients: c.recipients,
+    documentType: c.documentType ?? c.type,
+    link: c.link,
+  };
+}
+
 /**
  * Merge the BigDataCorp occurrences of the lawsuit (one per party document, freshest first) with
- * the DataJud record. BigDataCorp wins on descriptive fields; DataJud fills gaps and adds the
- * recent court movements BigDataCorp has not captured yet.
+ * the DataJud record and the DJEN communications. BigDataCorp wins on descriptive fields; DataJud
+ * fills gaps and adds recent court movements; DJEN adds the published intimations.
  */
 export function mergeLawsuitSources(
   number: string,
   rows: RawRecord[],
   dataJud: DataJudLawsuit | null,
   sources: LawsuitSearchSource[],
+  djen: DjenCommunication[] = [],
 ): LawsuitSearchResult {
-  if (rows.length === 0 && !dataJud) return emptyResult(number, sources);
+  if (rows.length === 0 && !dataJud && djen.length === 0) return emptyResult(number, sources);
   const sorted = [...rows].sort((a, b) =>
     (date(b.LastUpdate) ?? date(b.LastMovementDate) ?? '').localeCompare(
       date(a.LastUpdate) ?? date(a.LastMovementDate) ?? '',
@@ -204,6 +230,7 @@ export function mergeLawsuitSources(
   for (const m of dataJud?.movements ?? []) {
     movements.set(m.id, { ...m, kind: 'court_movement', source: 'DataJud CNJ' });
   }
+  for (const c of djen) movements.set(`djen:${c.id}`, intimationOf(c));
   const ordered = [...movements.values()].sort((a, b) => b.date.localeCompare(a.date));
 
   const parties = new Map<string, LawsuitSearchParty>();
@@ -223,7 +250,7 @@ export function mergeLawsuitSources(
   return {
     number,
     found: true,
-    court: pick('CourtName') ?? dataJud?.tribunal ?? null,
+    court: pick('CourtName') ?? dataJud?.tribunal ?? djen[0]?.court ?? null,
     courtLevel: pick('CourtLevel') ?? dataJud?.degree ?? null,
     district: pick('CourtDistrict'),
     state: pick('State') ?? (dataJud ? stateFromAlias(dataJud.alias) : null),
@@ -278,7 +305,7 @@ async function searchBureau(
 
 /**
  * Finds a lawsuit by number across every OpCore source: the BigDataCorp processes dataset of
- * each party CPF/CNPJ and the DataJud index of the court in the number.
+ * each party CPF/CNPJ, the DataJud index of the court in the number and the DJEN communications.
  */
 export async function searchLawsuit(
   input: {
@@ -297,15 +324,20 @@ export async function searchLawsuit(
   }
   const consult = deps.consult ?? consultDocument;
   const dataJudSearch = deps.dataJud ?? ((digits: string) => searchDataJudByNumber(digits));
+  const djenSearch = deps.djen ?? ((digits: string) => searchDjenByNumber(digits));
   const documents = [
     ...new Map(input.documents.map((d) => [`${d.documentType}:${d.document}`, d])).values(),
   ];
 
-  const [bureaus, dataJud] = await Promise.all([
+  const [bureaus, dataJud, djen] = await Promise.all([
     Promise.all(documents.map((doc) => searchBureau(number, doc, consult, input))),
     dataJudSearch(number).catch((e): DataJudByNumberResult => ({
       status: 'error',
       alias: null,
+      detail: (e as Error).message,
+    })),
+    djenSearch(number).catch((e): DjenByNumberResult => ({
+      status: 'error',
       detail: (e as Error).message,
     })),
   ]);
@@ -323,10 +355,20 @@ export async function searchLawsuit(
           detail: dataJud.detail,
         };
 
+  const djenSource: LawsuitSearchSource =
+    djen.status === 'ok'
+      ? {
+          name: 'DJEN (CNJ)',
+          status: 'ok',
+          detail: `${djen.communications.length} comunicação(ões)`,
+        }
+      : { name: 'DJEN (CNJ)', status: djen.status, detail: djen.detail };
+
   return mergeLawsuitSources(
     number,
     bureaus.flatMap((b) => b.matches),
     dataJud.status === 'ok' ? dataJud.lawsuit : null,
-    [...bureaus.map((b) => b.source), dataJudSource],
+    [...bureaus.map((b) => b.source), dataJudSource, djenSource],
+    djen.status === 'ok' ? djen.communications : [],
   );
 }

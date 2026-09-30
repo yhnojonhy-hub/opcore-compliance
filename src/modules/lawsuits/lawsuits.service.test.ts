@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { DataJudByNumberResult } from './datajud-by-number.js';
+import type { DjenByNumberResult } from './djen-by-number.js';
 
 vi.mock('../../db/prisma.js', () => ({ prisma: {} }));
 
@@ -64,6 +65,9 @@ const dataJudMissing: DataJudByNumberResult = {
   detail: 'não encontrado em TJSP',
 };
 
+const djenNone: DjenByNumberResult = { status: 'not_found', detail: 'nenhuma comunicação no DJEN' };
+const noDjen = async () => djenNone;
+
 function consultWith(raws: Record<string, unknown>) {
   return vi.fn(async ({ document }: { document: string }) => {
     const raw = raws[document];
@@ -96,7 +100,7 @@ describe('searchLawsuit', () => {
         ],
         forceRefresh: true,
       },
-      { consult, dataJud },
+      { consult, dataJud, djen: noDjen },
     );
 
     expect(dataJud).toHaveBeenCalledWith(DIGITS);
@@ -131,6 +135,7 @@ describe('searchLawsuit', () => {
         detail: '0 processo(s) do documento, nenhum com este número',
       },
       { name: 'DataJud CNJ (TJSP)', status: 'ok', detail: '1 movimento(s)' },
+      { name: 'DJEN (CNJ)', status: 'not_found', detail: 'nenhuma comunicação no DJEN' },
     ]);
   });
 
@@ -138,7 +143,7 @@ describe('searchLawsuit', () => {
     const consult = consultWith({ [CNPJ]: bdc('Lawsuits', []) });
     const result = await searchLawsuit(
       { number: DIGITS, documents: [{ document: CNPJ, documentType: 'CNPJ' }] },
-      { consult, dataJud: async () => dataJudOk },
+      { consult, dataJud: async () => dataJudOk, djen: noDjen },
     );
     expect(result.found).toBe(true);
     expect(result.court).toBe('TJSP');
@@ -160,7 +165,7 @@ describe('searchLawsuit', () => {
           { document: CPF, documentType: 'CPF' },
         ],
       },
-      { consult, dataJud: async () => dataJudMissing },
+      { consult, dataJud: async () => dataJudMissing, djen: noDjen },
     );
     expect(result.movements).toHaveLength(3);
     expect(result.amount).toBeNull();
@@ -171,19 +176,72 @@ describe('searchLawsuit', () => {
     const consult = consultWith({ [CNPJ]: new Error('BigDataCorp 500') });
     const result = await searchLawsuit(
       { number: DIGITS, documents: [{ document: CNPJ, documentType: 'CNPJ' }] },
-      { consult, dataJud: vi.fn().mockRejectedValue(new Error('rede')) },
+      {
+        consult,
+        dataJud: vi.fn().mockRejectedValue(new Error('rede')),
+        djen: vi.fn().mockRejectedValue(new Error('rede')),
+      },
     );
     expect(result.found).toBe(false);
     expect(result.movements).toEqual([]);
     expect(result.sources).toEqual([
       { name: 'BigDataCorp (CNPJ 34258765/****)', status: 'error', detail: 'BigDataCorp 500' },
       { name: 'DataJud CNJ', status: 'error', detail: 'rede' },
+      { name: 'DJEN (CNJ)', status: 'error', detail: 'rede' },
     ]);
+  });
+
+  it('intimações do DJEN entram como movimentos com data de disponibilização', async () => {
+    const consult = consultWith({ [CNPJ]: bdc('Lawsuits', []) });
+    const djen = vi.fn().mockResolvedValue({
+      status: 'ok',
+      communications: [
+        {
+          id: 'hash1',
+          availableAt: '2026-09-28',
+          type: 'Intimação',
+          documentType: 'Ato ordinatório',
+          court: 'TJSP',
+          organ: 'UPJ',
+          recipients: ['BANCO ORIGINAL S/A (polo ativo)'],
+          text: 'Providencie no prazo de 15 (quinze) dias',
+          link: 'https://x',
+        },
+      ],
+    } satisfies DjenByNumberResult);
+    const result = await searchLawsuit(
+      { number: DIGITS, documents: [{ document: CNPJ, documentType: 'CNPJ' }] },
+      { consult, dataJud: async () => dataJudMissing, djen },
+    );
+    expect(djen).toHaveBeenCalledWith(DIGITS);
+    expect(result.found).toBe(true);
+    expect(result.court).toBe('TJSP');
+    expect(result.movements).toEqual([
+      {
+        id: 'djen:hash1',
+        date: '2026-09-28T00:00:00',
+        kind: 'intimation',
+        source: 'DJEN',
+        content: 'Providencie no prazo de 15 (quinze) dias',
+        availableAt: '2026-09-28',
+        recipients: ['BANCO ORIGINAL S/A (polo ativo)'],
+        documentType: 'Ato ordinatório',
+        link: 'https://x',
+      },
+    ]);
+    expect(result.sources.at(-1)).toEqual({
+      name: 'DJEN (CNJ)',
+      status: 'ok',
+      detail: '1 comunicação(ões)',
+    });
   });
 
   it('rejeita número fora do padrão CNJ', async () => {
     await expect(
-      searchLawsuit({ number: '123', documents: [] }, { consult: vi.fn(), dataJud: vi.fn() }),
+      searchLawsuit(
+        { number: '123', documents: [] },
+        { consult: vi.fn(), dataJud: vi.fn(), djen: vi.fn() },
+      ),
     ).rejects.toBeInstanceOf(InvalidLawsuitNumberError);
   });
 });
