@@ -11,7 +11,6 @@ import {
 import { registerIntelRoutes, registerFullDossierRoute } from './modules/intel/intel.routes.js';
 import { registerContactsRoutes } from './modules/contacts/contacts.routes.js';
 import { registerBillingRoutes } from './modules/billing/billing.routes.js';
-import { registerLawsuitRoutes } from './modules/lawsuits/lawsuits.routes.js';
 
 export function createApp() {
   const app = express();
@@ -43,7 +42,6 @@ export function createApp() {
   registerFullDossierRoute(app);
   registerContactsRoutes(app);
   registerBillingRoutes(app);
-  registerLawsuitRoutes(app);
 
   return app;
 }
